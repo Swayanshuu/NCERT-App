@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
-import 'package:ncert_books_app/services/pdf_cache_service.dart';
 import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
 import 'package:ncert_books_app/widgets/custom_snack_bar.dart';
 import 'package:ncert_books_app/widgets/ad_banner_widget.dart';
-import 'package:ncert_books_app/widgets/glass/glass_card.dart';
-import 'package:ncert_books_app/widgets/glass/glass_surface.dart';
-import 'package:ncert_books_app/widgets/hover_builder.dart';
 import 'package:ncert_books_app/screens/profile/bloc/profile_bloc.dart';
+import 'package:ncert_books_app/screens/profile/widgets/avatar_selector_modal.dart';
+import 'package:ncert_books_app/screens/profile/widgets/profile_header_card.dart';
+import 'package:ncert_books_app/screens/profile/widgets/profile_stats_bar.dart';
+import 'package:ncert_books_app/screens/profile/widgets/profile_preferences_list.dart';
 
 class ProfileScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -21,7 +21,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with AutomaticKeepAliveClientMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -42,272 +43,101 @@ class _ProfileScreenState extends State<ProfileScreen> with AutomaticKeepAliveCl
   }
 
   void _showEditNameDialog() {
-    final controller = TextEditingController(text: widget.gamification.userName);
+    final isDark = widget.gamification.isDarkMode;
+    final controller = TextEditingController(
+      text: widget.gamification.userName,
+    );
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Edit Student Name', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        backgroundColor: isDark ? const Color(0xFF181818) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
+          ),
+        ),
+        title: Text(
+          'Edit Student Name',
+          style: GoogleFonts.roboto(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF111827),
+          ),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Enter your name',
-            border: OutlineInputBorder(),
+            hintStyle: GoogleFonts.roboto(
+              color: isDark ? const Color(0xFF777777) : const Color(0xFF9CA3AF),
+            ),
+            filled: true,
+            fillColor: isDark
+                ? const Color(0xFF222222)
+                : const Color(0xFFF3F4F6),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark
+                    ? const Color(0xFF333333)
+                    : const Color(0xFFE2E8F0),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark
+                    ? const Color(0xFF333333)
+                    : const Color(0xFFE2E8F0),
+              ),
+            ),
+          ),
+          style: GoogleFonts.roboto(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : const Color(0xFF111827),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.roboto(
+                color: isDark ? const Color(0xFF777777) : Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? Colors.white : const Color(0xFF18181B),
+              foregroundColor: isDark ? const Color(0xFF181818) : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             onPressed: () {
-              context.read<ProfileBloc>().add(ProfileNameUpdated(controller.text));
-              widget.gamification.setUserName(controller.text);
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                context.read<ProfileBloc>().add(ProfileNameUpdated(newName));
+                widget.gamification.setUserName(newName);
+              }
               Navigator.pop(ctx);
-              CustomSnackBar.showSuccess(context, 'Name updated to ${widget.gamification.userName} ✨');
+              CustomSnackBar.showSuccess(
+                context,
+                'Name updated to ${widget.gamification.userName}',
+              );
             },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAvatarPickerModal() {
-    final avatars = GamificationService.avatars;
-    final isDark = widget.gamification.isDarkMode;
-    final mediaQuery = MediaQuery.of(context);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: mediaQuery.size.height * 0.8,
-          ),
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: GlassSurface(
-            borderRadius: 32,
-            padding: const EdgeInsets.all(24),
-            color: isDark ? AppTheme.darkBackground.withValues(alpha: 0.95) : AppTheme.lightBackground.withValues(alpha: 0.95),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Choose Avatar',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: avatars.length,
-                    itemBuilder: (context, idx) {
-                      final av = avatars[idx];
-                      final isSel = widget.gamification.currentAvatar == av;
-                      return HoverBuilder(
-                        onTap: () {
-                          context.read<ProfileBloc>().add(ProfileAvatarUpdated(av));
-                          widget.gamification.setAvatar(av);
-                          Navigator.pop(ctx);
-                        },
-                        builder: (context, isHovered) => Material(
-                          color: Colors.transparent,
-                          child: ListTile(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            tileColor: isSel ? AppTheme.primaryTeal.withValues(alpha: 0.2) : null,
-                            leading: Text(av.split(' ').first, style: const TextStyle(fontSize: 26)),
-                            title: Text(av, style: GoogleFonts.outfit(fontWeight: isSel ? FontWeight.bold : FontWeight.w500)),
-                            trailing: isSel ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryTeal) : null,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader() {
-    final isDark = widget.gamification.isDarkMode;
-    return GlassCard(
-      borderRadius: 28,
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          HoverBuilder(
-            onTap: _showAvatarPickerModal,
-            tooltip: 'Change Avatar',
-            builder: (context, isHovered) => Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryTeal.withValues(alpha: 0.20),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppTheme.primaryTeal,
-                  width: 2,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  widget.gamification.currentAvatar.split(' ').first,
-                  style: const TextStyle(fontSize: 32),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      widget.gamification.userName,
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryTeal),
-                      onPressed: _showEditNameDialog,
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryTeal.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'Class ${widget.gamification.userClass} Student • Level ${widget.gamification.level}',
-                    style: GoogleFonts.outfit(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryTeal,
-                    ),
-                  ),
-                ),
-              ],
+            child: Text(
+              'Save',
+              style: GoogleFonts.roboto(fontWeight: FontWeight.w700),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatsCards() {
-    final isDark = widget.gamification.isDarkMode;
-    return Row(
-      children: [
-        Expanded(
-          child: GlassCard(
-            borderRadius: 20,
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              children: [
-                Text('⭐ ${widget.gamification.xp}', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('Total XP', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: GlassCard(
-            borderRadius: 20,
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              children: [
-                Text('🔥 ${widget.gamification.streak}d', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('Streak', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: GlassCard(
-            borderRadius: 20,
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              children: [
-                Text('❤️ ${widget.gamification.favoriteBookCodes.length}', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('Favorites', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPreferencesList() {
-    final isDark = widget.gamification.isDarkMode;
-
-    return GlassCard(
-      borderRadius: 24,
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Material(
-        color: Colors.transparent,
-        child: Column(
-          children: [
-            SwitchListTile(
-              value: widget.gamification.isDarkMode,
-              onChanged: (val) => widget.gamification.toggleTheme(),
-              secondary: Icon(
-                isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                color: AppTheme.accentAmber,
-              ),
-              title: Text('Dark Theme', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-              subtitle: Text('Toggle dark slate liquid interface', style: GoogleFonts.plusJakartaSans(fontSize: 12)),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.cleaning_services_rounded, color: AppTheme.accentRose),
-              title: Text('Clear PDF Cache', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-              subtitle: Text('Free up local storage space', style: GoogleFonts.plusJakartaSans(fontSize: 12)),
-              onTap: () async {
-                await PdfCacheService().clearAllCache();
-                if (mounted) {
-                  CustomSnackBar.showSuccess(context, 'PDF cache cleared successfully! 🧹');
-                }
-              },
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.info_outline_rounded, color: AppTheme.primaryTeal),
-              title: Text('App Version', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-              subtitle: Text('NCERT Fun Books & Reader v1.0.0 (Build 1)', style: GoogleFonts.plusJakartaSans(fontSize: 12)),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -316,72 +146,65 @@ class _ProfileScreenState extends State<ProfileScreen> with AutomaticKeepAliveCl
   Widget build(BuildContext context) {
     super.build(context);
     final isDark = widget.gamification.isDarkMode;
-    final isDesktop = AppResponsive.isDesktop(context);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: MaxContentConstraint(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 90),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Student Profile 👤',
-                  style: GoogleFonts.outfit(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                  ),
-                ),
-                Text(
-                  'Manage preferences, stats & account settings',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                if (isDesktop)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          children: [
-                            _buildProfileHeader(),
-                            const SizedBox(height: 16),
-                            _buildStatsCards(),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        flex: 6,
-                        child: _buildPreferencesList(),
-                      ),
-                    ],
-                  )
-                else
-                  Column(
-                    children: [
-                      _buildProfileHeader(),
-                      const SizedBox(height: 16),
-                      _buildStatsCards(),
-                      const SizedBox(height: 20),
-                      _buildPreferencesList(),
-                    ],
-                  ),
-
-                const SizedBox(height: 20),
-                const AdBannerWidget(),
-              ],
+    return MaxContentConstraint(
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 12,
+          bottom: 95,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Profile',
+              style: GoogleFonts.roboto(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: isDark
+                    ? AppTheme.darkTextPrimary
+                    : AppTheme.lightTextPrimary,
+                letterSpacing: -0.6,
+              ),
             ),
-          ),
+            const SizedBox(height: 2),
+            Text(
+              'Personal learning stats, streak & app settings',
+              style: GoogleFonts.roboto(
+                fontSize: 13,
+                color: isDark
+                    ? AppTheme.darkTextMuted
+                    : AppTheme.lightTextMuted,
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            ProfileHeaderCard(
+              userName: widget.gamification.userName,
+              userClass: widget.gamification.userClass,
+              level: widget.gamification.level,
+              currentAvatar: widget.gamification.currentAvatar,
+              onTapAvatar: () =>
+                  AvatarSelectorModal.show(context, widget.gamification),
+              onTapEditName: _showEditNameDialog,
+            ),
+            const SizedBox(height: 14),
+
+            ProfileStatsBar(
+              xp: widget.gamification.xp,
+              streak: widget.gamification.streak,
+              favoritesCount: widget.gamification.favoriteBookCodes.length,
+            ),
+            const SizedBox(height: 18),
+
+            ProfilePreferencesList(gamification: widget.gamification),
+            const SizedBox(height: 20),
+
+            const AdBannerWidget(),
+          ],
         ),
       ),
     );

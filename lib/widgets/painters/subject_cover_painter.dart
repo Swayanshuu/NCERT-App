@@ -93,7 +93,7 @@ class SubjectCoverArt extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       subject.toUpperCase(),
-                      style: GoogleFonts.fredoka(
+                      style: GoogleFonts.roboto(
                         color: Colors.white,
                         fontSize: 9,
                         fontWeight: FontWeight.bold,

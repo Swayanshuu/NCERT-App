@@ -99,4 +99,17 @@ class NcertRepository {
     });
     return results;
   }
+
+  bool get isLoaded => _isLoaded;
+
+  NcertBook? findBookByCode(String code) {
+    for (final subjects in _catalog.values) {
+      for (final books in subjects.values) {
+        for (final b in books) {
+          if (b.code == code) return b;
+        }
+      }
+    }
+    return null;
+  }
 }

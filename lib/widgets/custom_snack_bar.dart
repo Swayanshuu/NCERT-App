@@ -1,49 +1,70 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:auto_size_text/auto_size_text.dart';
-import '../theme/app_theme.dart';
 
 class CustomSnackBar {
   static OverlayEntry? _currentOverlay;
   static Timer? _overlayTimer;
 
-  static void showSuccess(BuildContext context, String message, {IconData icon = Icons.check_circle_rounded}) {
+  // Professional static surface & border matching Threads by Meta styling
+  static const Color _surfaceColor = Color(0xFF1E1E1E);
+  static const Color _staticBorderColor = Color(0xFF333333);
+  static const Color _successIconColor = Color(0xFF10B981);
+  static const Color _errorIconColor = Color(0xFFEF4444);
+  static const Color _infoIconColor = Color(0xFF94A3B8);
+  static const Color _rewardIconColor = Color(0xFFF59E0B);
+
+  static void showSuccess(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.check_circle_rounded,
+  }) {
     _show(
       context: context,
       message: message,
       icon: icon,
-      accentColor: AppTheme.duoGreen,
+      iconColor: _successIconColor,
     );
   }
 
-  static void showError(BuildContext context, String message, {IconData icon = Icons.warning_amber_rounded}) {
+  static void showError(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.error_outline_rounded,
+  }) {
     _show(
       context: context,
       message: message,
       icon: icon,
-      accentColor: AppTheme.duoRed,
+      iconColor: _errorIconColor,
     );
   }
 
-  static void showInfo(BuildContext context, String message, {IconData icon = Icons.info_rounded}) {
+  static void showInfo(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.info_outline_rounded,
+  }) {
     _show(
       context: context,
       message: message,
       icon: icon,
-      accentColor: AppTheme.duoCyan,
+      iconColor: _infoIconColor,
     );
   }
 
-  static void showReward(BuildContext context, String message, {IconData icon = Icons.stars_rounded}) {
+  static void showReward(
+    BuildContext context,
+    String message, {
+    IconData icon = Icons.stars_rounded,
+  }) {
     _show(
       context: context,
       message: message,
       icon: icon,
-      accentColor: AppTheme.duoYellow,
+      iconColor: _rewardIconColor,
     );
   }
 
@@ -51,37 +72,33 @@ class CustomSnackBar {
     required BuildContext context,
     required String message,
     required IconData icon,
-    required Color accentColor,
+    required Color iconColor,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 750 || (!kIsWeb && Platform.isWindows);
 
     if (isDesktop) {
-      _showTopRightDesktopToast(
+      _showDesktopToast(
         context: context,
         message: message,
         icon: icon,
-        accentColor: accentColor,
-        isDark: isDark,
+        iconColor: iconColor,
       );
     } else {
       _showMobileSnackBar(
         context: context,
         message: message,
         icon: icon,
-        accentColor: accentColor,
-        isDark: isDark,
+        iconColor: iconColor,
       );
     }
   }
 
-  static void _showTopRightDesktopToast({
+  static void _showDesktopToast({
     required BuildContext context,
     required String message,
     required IconData icon,
-    required Color accentColor,
-    required bool isDark,
+    required Color iconColor,
   }) {
     _overlayTimer?.cancel();
     _currentOverlay?.remove();
@@ -90,87 +107,68 @@ class CustomSnackBar {
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
 
-    final cardBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF);
-    final textCol = isDark ? Colors.white : const Color(0xFF0F172A);
-
     entry = OverlayEntry(
       builder: (ctx) => Positioned(
         top: 24,
         right: 28,
         child: Material(
           color: Colors.transparent,
-          child: SizedBox(
-            width: 320,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: cardBg.withValues(alpha: isDark ? 0.90 : 0.95),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: accentColor.withValues(alpha: 0.80),
-                      width: 1.5,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: _surfaceColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _staticBorderColor,
+                width: 1.0,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  color: iconColor,
+                  size: 16,
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    message,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.roboto(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      height: 1.25,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isDark
-                            ? Colors.black.withValues(alpha: 0.50)
-                            : accentColor.withValues(alpha: 0.20),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: isDark ? 0.22 : 0.14),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: accentColor.withValues(alpha: 0.40),
-                            width: 1,
-                          ),
-                        ),
-                        child: Icon(icon, color: accentColor, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AutoSizeText(
-                          message,
-                          maxLines: 2,
-                          minFontSize: 11,
-                          style: GoogleFonts.outfit(
-                            color: textCol,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () {
-                          _overlayTimer?.cancel();
-                          entry.remove();
-                          if (_currentOverlay == entry) {
-                            _currentOverlay = null;
-                          }
-                        },
-                        child: Icon(
-                          Icons.close_rounded,
-                          color: isDark ? Colors.white60 : Colors.grey.shade600,
-                          size: 18,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () {
+                    _overlayTimer?.cancel();
+                    entry.remove();
+                    if (_currentOverlay == entry) {
+                      _currentOverlay = null;
+                    }
+                  },
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Color(0xFF777777),
+                    size: 15,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -180,7 +178,7 @@ class CustomSnackBar {
     _currentOverlay = entry;
     overlay.insert(entry);
 
-    _overlayTimer = Timer(const Duration(seconds: 3), () {
+    _overlayTimer = Timer(const Duration(milliseconds: 2400), () {
       if (_currentOverlay == entry) {
         entry.remove();
         _currentOverlay = null;
@@ -192,73 +190,59 @@ class CustomSnackBar {
     required BuildContext context,
     required String message,
     required IconData icon,
-    required Color accentColor,
-    required bool isDark,
+    required Color iconColor,
   }) {
-    final cardBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFFFFFFF);
-    final textCol = isDark ? Colors.white : const Color(0xFF0F172A);
-
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        duration: const Duration(seconds: 3),
-        content: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: cardBg.withValues(alpha: isDark ? 0.90 : 0.95),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: accentColor.withValues(alpha: 0.80),
-                  width: 1.5,
+        margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20),
+        duration: const Duration(milliseconds: 2200),
+        content: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: _surfaceColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _staticBorderColor,
+                width: 1.0,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 4),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.45)
-                        : accentColor.withValues(alpha: 0.20),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: isDark ? 0.22 : 0.14),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: accentColor.withValues(alpha: 0.40),
-                        width: 1,
-                      ),
-                    ),
-                    child: Icon(icon, color: accentColor, size: 18),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AutoSizeText(
-                      message,
-                      maxLines: 2,
-                      minFontSize: 11,
-                      style: GoogleFonts.outfit(
-                        color: textCol,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  color: iconColor,
+                  size: 16,
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    message,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.roboto(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      height: 1.25,
+                      letterSpacing: -0.1,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

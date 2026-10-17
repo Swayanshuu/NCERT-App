@@ -1,13 +1,14 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:ncert_books_app/services/ncert_repository.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/ncert_book.dart';
 
-class PdfCacheService {
+class PdfCacheService extends ChangeNotifier {
   static final PdfCacheService _instance = PdfCacheService._internal();
   factory PdfCacheService() => _instance;
   PdfCacheService._internal();
@@ -16,7 +17,8 @@ class PdfCacheService {
   static const String prefsKeyDownloads = 'cached_books_metadata';
 
   static const Map<String, String> defaultHeaders = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': '*/*',
   };
 
@@ -68,7 +70,9 @@ class PdfCacheService {
       for (final entity in entities) {
         if (entity is Directory) {
           final bookCode = entity.path.split(RegExp(r'[/\\]')).last;
-          final pdfs = entity.listSync().where((f) => f.path.toLowerCase().endsWith('.pdf'));
+          final pdfs = entity.listSync().where(
+            (f) => f.path.toLowerCase().endsWith('.pdf'),
+          );
           if (pdfs.isNotEmpty) {
             _cachedCodesMemory.add(bookCode);
           }
@@ -129,10 +133,14 @@ class PdfCacheService {
     return header.contains('%PDF');
   }
 
-  static List<int> createOfflineFallbackPdfBytes(String bookTitle, String chapterTitle) {
+  static List<int> createOfflineFallbackPdfBytes(
+    String bookTitle,
+    String chapterTitle,
+  ) {
     final cleanBook = bookTitle.replaceAll(RegExp(r'[^\x20-\x7E]'), '');
     final cleanChapter = chapterTitle.replaceAll(RegExp(r'[^\x20-\x7E]'), '');
-    final pdfContent = '''%PDF-1.4
+    final pdfContent =
+        '''%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
 endobj
@@ -214,14 +222,20 @@ startxref
     onProgress?.call(0.1, 'Connecting to NCERT servers... (10%)');
 
     final urlsToTry = [
-      pdfUrl.startsWith('http:') ? pdfUrl.replaceFirst('http:', 'https:') : pdfUrl,
-      pdfUrl.startsWith('https:') ? pdfUrl.replaceFirst('https:', 'http:') : pdfUrl,
+      pdfUrl.startsWith('http:')
+          ? pdfUrl.replaceFirst('http:', 'https:')
+          : pdfUrl,
+      pdfUrl.startsWith('https:')
+          ? pdfUrl.replaceFirst('https:', 'http:')
+          : pdfUrl,
     ];
 
     for (final targetUrl in urlsToTry) {
       final targetUri = Uri.parse(targetUrl);
       try {
-        final res = await http.get(targetUri, headers: defaultHeaders).timeout(const Duration(seconds: 15));
+        final res = await http
+            .get(targetUri, headers: defaultHeaders)
+            .timeout(const Duration(seconds: 15));
         if (res.statusCode == 200 && isValidPdfBytes(res.bodyBytes)) {
           await outFile.writeAsBytes(res.bodyBytes);
           onProgress?.call(1.0, 'Chapter Ready! (100%)');
@@ -236,7 +250,9 @@ startxref
         request.headers.addAll(defaultHeaders);
         request.followRedirects = true;
         request.maxRedirects = 10;
-        final response = await client.send(request).timeout(const Duration(seconds: 20));
+        final response = await client
+            .send(request)
+            .timeout(const Duration(seconds: 20));
 
         if (response.statusCode == 200) {
           final contentLength = response.contentLength ?? 0;
@@ -300,7 +316,9 @@ startxref
 
     try {
       final zipUrl = '$baseUrl${bookCode}dd.zip';
-      final response = await http.get(Uri.parse(zipUrl), headers: defaultHeaders).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(Uri.parse(zipUrl), headers: defaultHeaders)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200 && response.bodyBytes.length > 500) {
         onProgress?.call(0.5, 'Extracting book package... (50%)');
@@ -348,18 +366,24 @@ startxref
 
     try {
       final psUrl = '$baseUrl${book.code}ps.pdf';
-      final rPs = await http.get(Uri.parse(psUrl), headers: defaultHeaders).timeout(const Duration(seconds: 8));
+      final rPs = await http
+          .get(Uri.parse(psUrl), headers: defaultHeaders)
+          .timeout(const Duration(seconds: 8));
       if (rPs.statusCode == 200 && isValidPdfBytes(rPs.bodyBytes)) {
         final f = File('${bookDir.path}/${book.code}ps.pdf');
         await f.writeAsBytes(rPs.bodyBytes);
       } else {
         final f = File('${bookDir.path}/${book.code}ps.pdf');
-        await f.writeAsBytes(createOfflineFallbackPdfBytes(book.text, 'Preliminary Pages'));
+        await f.writeAsBytes(
+          createOfflineFallbackPdfBytes(book.text, 'Preliminary Pages'),
+        );
       }
     } catch (_) {
       try {
         final f = File('${bookDir.path}/${book.code}ps.pdf');
-        await f.writeAsBytes(createOfflineFallbackPdfBytes(book.text, 'Preliminary Pages'));
+        await f.writeAsBytes(
+          createOfflineFallbackPdfBytes(book.text, 'Preliminary Pages'),
+        );
       } catch (_) {}
     }
 
@@ -377,7 +401,9 @@ startxref
       bool downloadedOk = false;
 
       try {
-        final res = await http.get(Uri.parse(chUrl), headers: defaultHeaders).timeout(const Duration(seconds: 10));
+        final res = await http
+            .get(Uri.parse(chUrl), headers: defaultHeaders)
+            .timeout(const Duration(seconds: 10));
         if (res.statusCode == 200 && isValidPdfBytes(res.bodyBytes)) {
           await f.writeAsBytes(res.bodyBytes);
           downloadedOk = true;
@@ -386,7 +412,9 @@ startxref
 
       if (!downloadedOk) {
         // Fallback generator ensures every chapter succeeds offline
-        await f.writeAsBytes(createOfflineFallbackPdfBytes(book.text, 'Chapter $i'));
+        await f.writeAsBytes(
+          createOfflineFallbackPdfBytes(book.text, 'Chapter $i'),
+        );
       }
     }
   }
@@ -403,6 +431,7 @@ startxref
     };
 
     await prefs.setString(prefsKeyDownloads, jsonEncode(map));
+    notifyListeners();
   }
 
   Future<List<NcertBook>> getDownloadedBooksList() async {
@@ -416,7 +445,32 @@ startxref
       final bookCode = entry.key;
       if (await isBookCached(bookCode)) {
         final bMap = entry.value as Map<String, dynamic>;
-        result.add(NcertBook.fromJson(bMap, bMap['className'] ?? '1', bMap['subject'] ?? ''));
+        result.add(
+          NcertBook.fromJson(
+            bMap,
+            bMap['className'] ?? '1',
+            bMap['subject'] ?? '',
+          ),
+        );
+      }
+    }
+
+    for (final code in _cachedCodesMemory) {
+      if (!result.any((b) => b.code == code)) {
+        final repoBook = NcertRepository().findBookByCode(code);
+        if (repoBook != null) {
+          result.add(repoBook);
+        } else {
+          result.add(
+            NcertBook(
+              code: code,
+              text: code,
+              className: '10',
+              subject: 'General',
+              chapters: '1-10',
+            ),
+          );
+        }
       }
     }
     return result;
@@ -427,12 +481,7 @@ startxref
     final List<Map<String, dynamic>> list = [];
     for (final b in books) {
       final files = await getCachedPdfFiles(b.code);
-      list.add({
-        'code': b.code,
-        'title': b.text,
-        'book': b,
-        'files': files,
-      });
+      list.add({'code': b.code, 'title': b.text, 'book': b, 'files': files});
     }
     return list;
   }
@@ -484,6 +533,8 @@ startxref
     final remaining = await getCachedPdfFiles(bookCode);
     if (remaining.isEmpty) {
       await deleteCachedBook(bookCode);
+    } else {
+      notifyListeners();
     }
   }
 
@@ -501,6 +552,7 @@ startxref
     final Map<String, dynamic> map = jsonDecode(raw);
     map.remove(bookCode);
     await prefs.setString(prefsKeyDownloads, jsonEncode(map));
+    notifyListeners();
   }
 
   Future<void> clearAllCache() async {
@@ -510,5 +562,6 @@ startxref
     _cachedCodesMemory.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(prefsKeyDownloads);
+    notifyListeners();
   }
 }

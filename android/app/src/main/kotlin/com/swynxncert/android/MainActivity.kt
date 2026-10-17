@@ -1,4 +1,4 @@
-package com.ncert.app.ncert_books_app
+package com.swynxncert.android
 
 import io.flutter.embedding.android.FlutterActivity
 

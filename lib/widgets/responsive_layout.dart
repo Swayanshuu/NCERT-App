@@ -86,7 +86,7 @@ class DesktopSidebarNavigation extends StatelessWidget {
           ),
           Text(
             'v1.0.0',
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.roboto(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,

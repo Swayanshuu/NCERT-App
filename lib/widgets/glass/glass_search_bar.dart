@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'glass_surface.dart';
-import '../../theme/app_theme.dart';
 
 class GlassSearchBar extends StatelessWidget {
   final TextEditingController controller;
@@ -15,75 +13,70 @@ class GlassSearchBar extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     this.onClear,
-    this.hintText = 'Search NCERT books, subjects, chapters...',
+    this.hintText = 'Search notes...',
     required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GlassSurface(
-      height: 52,
-      borderRadius: 26,
-      blurSigma: 20,
-      color: isDark
-          ? AppTheme.darkSurface.withValues(alpha: 0.90)
-          : Colors.white.withValues(alpha: 0.94),
-      borderColor: isDark
-          ? AppTheme.primaryTeal.withValues(alpha: 0.50)
-          : AppTheme.primaryTeal.withValues(alpha: 0.70),
-      boxShadow: [
-        BoxShadow(
-          color: isDark
-              ? Colors.black.withValues(alpha: 0.40)
-              : AppTheme.primaryTealDark.withValues(alpha: 0.12),
-          blurRadius: 16,
-          offset: const Offset(0, 4),
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF181818) : const Color(0xFFF1F1F4),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
+          width: 1.0,
         ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.search_rounded,
-              color: AppTheme.primaryTeal,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: controller,
-                onChanged: onChanged,
-                decoration: InputDecoration(
-                  hintText: hintText,
-                  hintStyle: GoogleFonts.plusJakartaSans(
-                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                    fontSize: 14,
-                  ),
-                  border: InputBorder.none,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search_rounded,
+            color: isDark ? const Color(0xFF777777) : const Color(0xFF6B7280),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: GoogleFonts.roboto(
+                  color: isDark ? const Color(0xFF777777) : const Color(0xFF9CA3AF),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
                 ),
-                style: GoogleFonts.outfit(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: GoogleFonts.roboto(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white : const Color(0xFF111827),
+              ),
+            ),
+          ),
+          if (controller.text.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                controller.clear();
+                onChanged('');
+                onClear?.call();
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Icon(
+                  Icons.close_rounded,
+                  color: isDark ? Colors.white70 : const Color(0xFF6B7280),
+                  size: 18,
                 ),
               ),
             ),
-            if (controller.text.isNotEmpty)
-              IconButton(
-                icon: const Icon(
-                  Icons.clear_rounded,
-                  color: AppTheme.accentRose,
-                  size: 20,
-                ),
-                onPressed: () {
-                  controller.clear();
-                  onChanged('');
-                  onClear?.call();
-                },
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }

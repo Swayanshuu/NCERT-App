@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ncert_books_app/widgets/painters/gamification_painters.dart';
+import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/widgets/hover_builder.dart';
 
 class SubjectWorldCard extends StatelessWidget {
@@ -29,134 +29,108 @@ class SubjectWorldCard extends StatelessWidget {
 
     return HoverBuilder(
       onTap: onTap,
-      builder: (context, isHovered) => AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        transform: isHovered ? Matrix4.diagonal3Values(1.02, 1.02, 1.0) : Matrix4.identity(),
+      builder: (context, isHovered) => Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              themeColor.withValues(alpha: isDark ? 0.22 : 0.14),
-              themeColor.withValues(alpha: isDark ? 0.08 : 0.04),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: isDark ? AppTheme.darkCard : AppTheme.lightCard,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isHovered
-                ? themeColor
-                : themeColor.withValues(alpha: isDark ? 0.35 : 0.22),
-            width: isHovered ? 1.8 : 1.2,
+            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+            width: 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: themeColor.withValues(alpha: isHovered ? 0.22 : 0.06),
-              blurRadius: isHovered ? 12 : 6,
+              color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.04),
+              blurRadius: 10,
               offset: const Offset(0, 3),
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: SubjectWorldPainter(
-                    subjectName: title,
-                    themeColor: themeColor,
-                  ),
-                ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: themeColor.withValues(alpha: isDark ? 0.20 : 0.12),
+                shape: BoxShape.circle,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.black26 : Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: themeColor.withValues(alpha: 0.2),
-                            blurRadius: 6,
+              child: Icon(
+                fallbackIcon,
+                color: themeColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.roboto(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
                           ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(iconEmoji, style: const TextStyle(fontSize: 22)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  title,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                '${(progress * 100).toInt()}%',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: themeColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 5,
-                              backgroundColor: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                              valueColor: AlwaysStoppedAnimation<Color>(themeColor),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '$bookCount Books',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: themeColor,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      Text(
+                        '${(progress * 100).toInt()}%',
+                        style: GoogleFonts.roboto(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 3,
+                      backgroundColor: isDark ? const Color(0xFF242424) : const Color(0xFFE5E7EB),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDark ? Colors.white : const Color(0xFF18181B),
+                      ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF222222) : const Color(0xFFF1F1F4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                  width: 0.8,
                 ),
               ),
-            ],
-          ),
+              child: Text(
+                '$bookCount Books',
+                style: GoogleFonts.roboto(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+

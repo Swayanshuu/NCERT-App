@@ -45,16 +45,16 @@ class LearningJourneyWidget extends StatelessWidget {
                   children: [
                     Text(
                       'LEARNING JOURNEY',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.roboto(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        letterSpacing: 0.5,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     Text(
                       bookTitle,
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.roboto(
                         fontSize: 12,
                         color: isDark ? Colors.white60 : const Color(0xFF64748B),
                       ),
@@ -138,9 +138,9 @@ class LearningJourneyWidget extends StatelessWidget {
                             ),
                             child: Text(
                               'Ch $chNum • $label',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.roboto(
                                 fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 color: nodeColor,
                               ),
                             ),

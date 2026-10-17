@@ -1,69 +1,154 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'glass_surface.dart';
-import '../../theme/app_theme.dart';
 
 class GlassToolbar extends StatelessWidget {
   final String title;
   final String subtitle;
-  final bool isBookmarked;
   final VoidCallback onBack;
-  final VoidCallback onBookmarkToggle;
-  final VoidCallback onPaletteTap;
+  final VoidCallback onDownload;
+  final bool isDownloaded;
+  final bool isDownloading;
 
   const GlassToolbar({
     super.key,
     required this.title,
     required this.subtitle,
-    required this.isBookmarked,
     required this.onBack,
-    required this.onBookmarkToggle,
-    required this.onPaletteTap,
+    required this.onDownload,
+    this.isDownloaded = false,
+    this.isDownloading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GlassSurface(
-      height: 60,
-      borderRadius: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      blurSigma: 20,
+    const buttonBg = Color(0xFF181818);
+    const borderColor = Color(0xFF282828);
+
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: onBack,
+          // 1. Circular Back Button
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onBack,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: buttonBg,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1.0),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  size: 19,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
+          const SizedBox(width: 10),
+
+          // 2. Center Pill Title Card
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppTheme.primaryTeal),
-                ),
-              ],
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: buttonBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor, width: 1.0),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: RichText(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '$title ',
+                            style: GoogleFonts.roboto(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          TextSpan(
+                            text: '• $subtitle',
+                            style: GoogleFonts.roboto(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF777777),
+                              letterSpacing: -0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          IconButton(
-            icon: Icon(
-              isBookmarked ? Icons.star_rounded : Icons.star_border_rounded,
-              color: isBookmarked ? AppTheme.accentAmber : null,
+          const SizedBox(width: 10),
+
+          // 3. Download to App Button
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onDownload,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: buttonBg,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDownloaded
+                        ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                        : borderColor,
+                    width: 1.0,
+                  ),
+                ),
+                child: Center(
+                  child: isDownloading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          isDownloaded
+                              ? Icons.check_rounded
+                              : Icons.download_rounded,
+                          size: isDownloaded ? 18 : 20,
+                          color: isDownloaded
+                              ? const Color(0xFF10B981)
+                              : Colors.white,
+                        ),
+                ),
+              ),
             ),
-            onPressed: onBookmarkToggle,
-          ),
-          IconButton(
-            icon: const Icon(Icons.palette_outlined),
-            onPressed: onPaletteTap,
           ),
         ],
       ),

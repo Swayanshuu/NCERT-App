@@ -1,151 +1,147 @@
 <div align="center">
-  <img src="assets/logo.png" width="128" height="128" alt="NCERT Books App Logo" />
-  <h1>NCERT Books & Digital Reader</h1>
-  <p><strong>A Modern, Cross-Platform Educational Digital Reader and Gamified Learning Management System built with Flutter.</strong></p>
-  <p>Version 1.0.0</p>
+  <img src="assets/logo.png" width="120" height="120" alt="NCERT Books App Logo" />
+  <h1>NCERT Books & Offline Digital Reader</h1>
+  <p><strong>A Modern, Fast, and Gamified NCERT Textbooks & Solutions Reader for Android & Tablets.</strong></p>
+  <p>Engineered with Flutter • Threads Obsidian Dark Aesthetic • 100% Offline Vault</p>
 </div>
 
 ---
 
-## Overview
+## 📖 Overview
 
-NCERT Books & Digital Reader is a cross-platform application designed for students from Class 1 through Class 12. It provides access to official NCERT textbooks, chapter PDF reading, offline access, progress tracking, and interactive study statistics across Mobile, Tablet, and Desktop environments.
+**NCERT Books & Offline Digital Reader** is a high-performance Flutter application designed for students and educators from Class 1 through Class 12. It provides instant access to official NCERT textbooks, chapter-by-chapter PDF reading, offline vault storage, and study progress tracking.
 
-The application features a modern Glassmorphic user interface, dark and light theme adaptation, responsive grid layouts, and automated daily learning mission tracking.
-
----
-
-## Core Features
-
-- **Complete NCERT Catalog Access**: Dynamic catalog covering Class 1 to Class 12 across Mathematics, Science, Social Science, English, Hindi, Sanskrit, and environmental subjects.
-- **Glassmorphic Design System**: Custom translucency, frosted glass effects, subtle borders, and fluid animations tuned for performance across devices.
-- **Cross-Platform Responsive Architecture**: Adapts dynamically from mobile phones to wide desktop laptop screens with custom grid layouts and side navigation rails.
-- **Integrated PDF Reader Engine**: High-performance PDF viewing supporting multi-page navigation, paper theme customization (Day, Sepia, Night), local caching, and page bookmarking.
-- **Guaranteed Offline Reliability**: Automated offline PDF generation engine ensuring content availability even without network connectivity.
-- **Gamified Learning & Analytics**: Automated XP reward accumulation, daily reading streaks, level title progression, trophy badges, and mission tracking.
-- **Theme Customization**: Real-time smooth switching between Dark Mode and Light Mode with system-wide state persistence.
+The app features a **Threads by Meta-inspired Obsidian Dark Theme** (`#101010` backdrop, `#181818` card surfaces, `#282828` hairline borders, and pure white typography), paired with zero-clutter semantic static icons and Google Fonts (Roboto & Syne Tactile).
 
 ---
 
-## Technical Stack
+## ✨ Key Features
 
-| Component | Technology |
+### 📚 Complete NCERT Textbook Catalog
+- **Class 1 to Class 12**: Covers all core NCERT streams including Mathematics, Science, Social Science, English, Hindi, Sanskrit, and Environmental Studies.
+- **Smart Subject Filtering**: 2-column responsive subject cards with live book counts and quick-filter chips.
+- **Instant Search**: Real-time search across classes, subjects, books, and chapter titles.
+
+### ⚡ Offline Library & Private Vault
+- **100% Offline Reading**: Download entire textbooks or single chapters directly to the device's private vault (`.ncert_private_vault`).
+- **Real-Time Auto-Update**: Immediate reactive state sync — downloaded books, disk storage usage, and pinned favorites update live without restarting or reloading.
+- **Chapter Explorer & Cache Management**: Inspect downloaded chapter files, open offline PDFs, or free up storage on demand.
+- **Starred Favorites & Bookmarks**: Save favorite textbooks and bookmark specific pages with 1-tap jump back from the reading viewer.
+
+### 🎨 Threads Obsidian Dark Design System
+- **Curated Color Palette**: Strictly locked to obsidian dark `#101010` background, `#181818` elevated surfaces, `#282828` subtle hairline borders, and `#FFFFFF` headers.
+- **Clean Iconography**: Pure semantic Flutter `IconData` with static accent colors. No confusing emojis or inconsistent styling.
+- **Typography**: Clean `GoogleFonts.roboto` hierarchy globally with `GoogleFonts.syneTactile` for the SWYNX brand header.
+- **Floating Glass Navigation Bar**: Modern 5-tab floating bar with smooth active pill animation (**Home**, **Explore**, **Library**, **Progress**, **Profile**).
+
+### 🏆 Gamified Learning & Progress
+- **XP Progression & Level Titles**: Earn experience points by reading chapters, downloading offline books, and exploring new subjects.
+- **Daily Reading Streaks**: Streak tracker with milestone celebration confetti overlays.
+- **Learning Journey & Quest Badges**: Structured reading missions and unlockable trophies.
+
+### 📢 Integrated AdMob Monetization
+- **Non-Intrusive Banner Placement**: Ad banners are dynamically inserted between subject card rows at randomized positions.
+- **Fail-Safe Ad Fallback**: Built-in test banner fallback and elegant dark sponsored placeholders ensure ad slots never collapse invisibly during development or offline usage.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
 | :--- | :--- |
-| **Framework** | Flutter (SDK ^3.12.2) |
-| **Language** | Dart |
-| **PDF Renderer** | `pdfrx` |
-| **UI Design System** | Glassmorphism (`oc_liquid_glass`, Custom Painters) |
-| **Typography** | `google_fonts` (Outfit, Plus Jakarta Sans) |
-| **State & Persistence** | `ChangeNotifier`, `shared_preferences` |
-| **Network & I/O** | `http`, `path_provider` |
+| **Framework** | Flutter (Dart SDK ^3.12.2) |
+| **PDF Engine** | `pdfrx` (Hardware-accelerated PDF rendering) |
+| **Architecture** | BLoC + `ChangeNotifier` reactive service singletons |
+| **Typography** | `google_fonts` (Roboto, Syne Tactile) |
+| **Local Storage** | `shared_preferences`, `path_provider` |
+| **Monetization** | `google_mobile_ads` (Banner Ads with Fallback) |
+| **Animations** | `confetti`, custom Flutter implicitly animated widgets |
 | **Notifications** | `flutter_local_notifications`, `timezone` |
 
 ---
 
-## Project Structure
+## 📁 Project Architecture
 
 ```text
 ncert_books_app/
 ├── assets/
-│   ├── data.json                   # Official NCERT Catalog Data
-│   └── logo.png                    # Official Application Logo
+│   ├── data.json                   # Official NCERT Catalog Database
+│   └── logo.png                    # Application Brand Icon
 ├── lib/
 │   ├── models/                     # Data Models (NcertBook, PdfBookmark)
-│   ├── screens/                    # Modular Application Screen Domains
-│   │   ├── books/                  # Books Domain (bloc/, widgets/, screens)
-│   │   │   ├── bloc/               # books_bloc.dart, books_event.dart, books_state.dart
-│   │   │   └── widgets/            # book_card.dart
-│   │   ├── explore/                # Catalog Search Domain (bloc/, widgets/, screens)
-│   │   │   ├── bloc/               # explore_bloc.dart, explore_event.dart, explore_state.dart
-│   │   │   └── widgets/            # subject_card.dart, subject_chip.dart
-│   │   ├── home/                   # Dashboard & Navigation Domain (bloc/, widgets/, screens)
-│   │   │   ├── bloc/               # home_bloc.dart, home_event.dart, home_state.dart
-│   │   │   └── widgets/            # hero_player_card.dart, daily_mission_card.dart, reward_chest_widget.dart, streak_header.dart
-│   │   ├── onboarding/             # Onboarding Setup Domain (bloc/, screens)
-│   │   │   └── bloc/               # onboarding_bloc.dart, onboarding_event.dart, onboarding_state.dart
-│   │   ├── profile/                # Profile & Settings Domain (bloc/, screens)
-│   │   │   └── bloc/               # profile_bloc.dart, profile_event.dart, profile_state.dart
-│   │   ├── progress/               # Learning Analytics Domain (bloc/, widgets/, screens)
-│   │   │   ├── bloc/               # progress_bloc.dart, progress_event.dart, progress_state.dart
-│   │   │   └── widgets/            # achievement_badge_card.dart, learning_journey_widget.dart, subject_world_card.dart
-│   │   └── reader/                 # PDF Reader Engine Domain (bloc/, screens)
-│   │       └── bloc/               # pdf_reader_bloc.dart, pdf_reader_event.dart, pdf_reader_state.dart
-│   ├── services/                   # Business Logic & Data Providers
-│   │   ├── gamification_service.dart
-│   │   ├── ncert_repository.dart
-│   │   ├── pdf_cache_service.dart
-│   │   └── notification_service.dart
-│   ├── theme/                      # Responsive Breakpoints & Glass Theme System
-│   └── widgets/                    # Shared UI System (glass/, liquid/, painters/)
-└── pubspec.yaml                    # Application Dependencies & Assets Configuration
+│   ├── screens/                    # Modular Screen Architectures
+│   │   ├── books/                  # Book Detail, Downloads, Favorites
+│   │   │   └── widgets/            # BookCard, DownloadedBookTile, ChapterExplorerModal
+│   │   ├── explore/                # Catalog Browse & Search
+│   │   │   └── widgets/            # SubjectCard, SubjectChip
+│   │   ├── home/                   # Main Dashboard & Navigation
+│   │   │   └── widgets/            # HeroPlayerCard, HomeHeader, SubjectFilterBar, HomeBooksGrid
+│   │   ├── onboarding/             # Student Setup & Avatar Selection
+│   │   ├── profile/                # Profile, Offline Storage & Settings
+│   │   ├── progress/               # Gamification Stats, Badges & Quests
+│   │   └── reader/                 # Full-Screen PDF Reader
+│   ├── services/                   # Core Singletons
+│   │   ├── ad_service.dart         # Google Mobile Ads Controller
+│   │   ├── gamification_service.dart # XP, Streaks, Favorites & Bookmarks
+│   │   ├── ncert_repository.dart   # Offline JSON Catalog Provider
+│   │   ├── notification_service.dart # Daily Study Reminders
+│   │   └── pdf_cache_service.dart  # Offline Vault & Download Manager
+│   ├── theme/                      # AppTheme (Threads Dark System) & AppResponsive
+│   └── widgets/                    # Shared UI Components (AdBannerWidget, GlassNavBar, CustomSnackBar)
+└── pubspec.yaml                    # Flutter Dependencies
 ```
 
 ---
 
-## Installation & Setup
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Flutter SDK (version 3.12.0 or higher)
-- Dart SDK
-- Android Studio / VS Code with Flutter extension
-- Windows C++ Build Tools (for Windows Desktop builds)
+- Flutter SDK (3.12.0 or higher)
+- Android SDK (API level 21+)
+- Android Studio / VS Code with Dart & Flutter extensions
 
-### Installation Steps
+### Setup & Run
 
-1. **Clone the Repository**:
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/Swayanshuu/NCERT-App.git
    cd NCERT-App
    ```
 
-2. **Install Dependencies**:
+2. **Fetch dependencies**:
    ```bash
    flutter pub get
    ```
 
-3. **Run Application**:
+3. **Verify code analysis**:
+   ```bash
+   flutter analyze lib/
+   flutter test
+   ```
 
-   - **Windows Desktop**:
-     ```bash
-     flutter run -d windows
-     ```
-
-   - **Android Device / Emulator**:
-     ```bash
-     flutter run -d android
-     ```
-
-   - **Web Environment**:
-     ```bash
-     flutter run -d chrome
-     ```
+4. **Launch the application**:
+   ```bash
+   flutter run -d android
+   ```
 
 ---
 
-## Build Commands
+## 📦 Build Commands
 
-To generate release binaries for distribution:
+Generate release binaries:
 
-- **Android APK**:
-  ```bash
-  flutter build apk --release
-  ```
+```bash
+# Android APK
+flutter build apk --release
 
-- **Windows Desktop Application**:
-  ```bash
-  flutter build windows --release
-  ```
-
-- **Web Bundle**:
-  ```bash
-  flutter build web --release
-  ```
+# Android App Bundle (Play Store)
+flutter build appbundle --release
+```
 
 ---
 
-## Author & Maintainer
+## 📄 License & Attribution
 
-- **Developer**: swayanshuuu
-- **Email**: swayanshu19@gmail.com
-- **Repository**: [https://github.com/Swayanshuu/NCERT-App](https://github.com/Swayanshuu/NCERT-App)
+- Textbook content is property of the **National Council of Educational Research and Training (NCERT)**, Government of India.
+- Maintained by [Swayanshuu](https://github.com/Swayanshuu).

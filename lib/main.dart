@@ -47,6 +47,12 @@ void main() async {
 
 Future<void> _initServicesAsync(GamificationService gamification) async {
   try {
+    await NcertRepository().loadCatalog();
+  } catch (e) {
+    debugPrint('NcertRepository load error: $e');
+  }
+
+  try {
     await PdfCacheService().syncMemoryCache();
   } catch (e) {
     debugPrint('PdfCacheService sync error: $e');
@@ -130,13 +136,11 @@ class _NcertBooksAppState extends State<NcertBooksApp> {
         ),
       ],
       child: MaterialApp(
-        title: 'NCERT Fun Books & Reader',
+        title: 'NCERT Books and Solutions',
         debugShowCheckedModeBanner: false,
         scrollBehavior: const AppScrollBehavior(),
-        themeMode: widget.gamification.isDarkMode
-            ? ThemeMode.dark
-            : ThemeMode.light,
-        theme: AppTheme.lightThemeData(),
+        themeMode: ThemeMode.dark,
+        theme: AppTheme.darkThemeData(),
         darkTheme: AppTheme.darkThemeData(),
         home: widget.gamification.isOnboardingCompleted
             ? HomeScreen(gamification: widget.gamification)

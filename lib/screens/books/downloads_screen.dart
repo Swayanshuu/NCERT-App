@@ -1,6 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:io';
 import 'package:ncert_books_app/models/ncert_book.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
 import 'package:ncert_books_app/services/ncert_repository.dart';
@@ -8,12 +8,11 @@ import 'package:ncert_books_app/services/pdf_cache_service.dart';
 import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
 import 'package:ncert_books_app/widgets/custom_snack_bar.dart';
-import 'package:ncert_books_app/widgets/glass/glass_card.dart';
-import 'package:ncert_books_app/widgets/glass/glass_surface.dart';
-import 'package:ncert_books_app/widgets/glass/glass_button.dart';
-import 'package:ncert_books_app/widgets/glass/glass_segmented_control.dart';
-import 'package:ncert_books_app/screens/reader/pdf_viewer_screen.dart';
+import 'package:ncert_books_app/screens/books/widgets/downloaded_book_tile.dart';
+import 'package:ncert_books_app/screens/books/widgets/chapter_explorer_modal.dart';
+import 'package:ncert_books_app/screens/books/widgets/book_card.dart';
 import 'package:ncert_books_app/screens/books/book_detail_screen.dart';
+import 'package:ncert_books_app/screens/reader/pdf_viewer_screen.dart';
 
 class DownloadsScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -21,15 +20,14 @@ class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key, required this.gamification});
 
   @override
-  State<DownloadsScreen> createState() => _DownloadsScreenState();
+  State<DownloadsScreen> createState() => DownloadsScreenState();
 }
 
-class _DownloadsScreenState extends State<DownloadsScreen>
+class DownloadsScreenState extends State<DownloadsScreen>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   int _selectedSegmentIndex = 0;
   List<Map<String, dynamic>> _cachedBooks = [];
-  Map<String, dynamic>? _selectedDesktopBook;
   bool _isLoading = true;
   String _totalStorageString = '0 KB';
 
@@ -43,38 +41,59 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     _tabController.addListener(() {
       if (_tabController.indexIsChanging || _tabController.index != _selectedSegmentIndex) {
         if (mounted) {
-          setState(() {
-            _selectedSegmentIndex = _tabController.index;
-          });
+          setState(() => _selectedSegmentIndex = _tabController.index);
         }
       }
     });
     widget.gamification.addListener(_onStateChanged);
-    _loadCachedBooks();
+    PdfCacheService().addListener(_onCacheChanged);
+    _initAndLoad();
+  }
+
+  Future<void> _initAndLoad() async {
+    if (!NcertRepository().isLoaded) {
+      await NcertRepository().loadCatalog();
+    }
+    await _loadCachedBooks(showLoading: true);
+  }
+
+  void reload() {
+    _loadCachedBooks(showLoading: false);
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     widget.gamification.removeListener(_onStateChanged);
+    PdfCacheService().removeListener(_onCacheChanged);
     super.dispose();
   }
 
-  void _onStateChanged() {
-    if (mounted) setState(() {});
+  void _onCacheChanged() {
+    if (mounted) {
+      _loadCachedBooks(showLoading: false);
+      setState(() {});
+    }
   }
 
-  Future<void> _loadCachedBooks() async {
-    setState(() => _isLoading = true);
+  void _onStateChanged() {
+    if (mounted) {
+      _loadCachedBooks(showLoading: false);
+      setState(() {});
+    }
+  }
+
+  Future<void> _loadCachedBooks({bool showLoading = false}) async {
+    if (showLoading && _cachedBooks.isEmpty) {
+      setState(() => _isLoading = true);
+    }
     final cached = await PdfCacheService().getAllCachedBooksInfo();
     final storageStr = await PdfCacheService().getTotalStorageSizeString();
     if (mounted) {
       setState(() {
         _cachedBooks = cached;
         _totalStorageString = storageStr;
-        if (cached.isNotEmpty) {
-          _selectedDesktopBook = cached.first;
-        }
         _isLoading = false;
       });
     }
@@ -84,32 +103,27 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     await PdfCacheService().deleteCachedBook(bookCode);
     await _loadCachedBooks();
     if (mounted) {
-      CustomSnackBar.showSuccess(context, 'Cleared $bookTitle from offline vault 🗑️');
+      CustomSnackBar.showSuccess(context, 'Cleared $bookTitle from offline vault');
     }
-  }
-
-  void _openOfflinePdfFile(File pdfFile, String bookTitle, String chapterTitle, NcertBook? book) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PdfViewerScreen(
-          pdfFile: pdfFile, // Direct local file: ZERO remote API calls needed!
-          bookTitle: bookTitle,
-          chapterTitle: chapterTitle,
-          book: book,
-        ),
-      ),
-    );
   }
 
   List<NcertBook> _getFavoriteBooksList() {
     final repo = NcertRepository();
+    final favCodes = widget.gamification.favoriteBookCodes;
     final List<NcertBook> favorites = [];
-    for (final cls in repo.getAvailableClasses()) {
-      for (final subj in repo.getSubjectsForClass(cls)) {
-        for (final book in repo.getBooks(cls, subj)) {
-          if (widget.gamification.isFavorite(book.code) && !favorites.any((b) => b.code == book.code)) {
-            favorites.add(book);
+    for (final code in favCodes) {
+      final book = repo.findBookByCode(code);
+      if (book != null && !favorites.any((b) => b.code == book.code)) {
+        favorites.add(book);
+      }
+    }
+    if (favorites.isEmpty && favCodes.isNotEmpty) {
+      for (final cls in repo.getAvailableClasses()) {
+        for (final subj in repo.getSubjectsForClass(cls)) {
+          for (final book in repo.getBooks(cls, subj)) {
+            if (widget.gamification.isFavorite(book.code) && !favorites.any((b) => b.code == book.code)) {
+              favorites.add(book);
+            }
           }
         }
       }
@@ -117,124 +131,110 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     return favorites;
   }
 
-  String _getChapterTitleFromFileName(String filePath) {
-    final clean = filePath.split(RegExp(r'[/\\]')).last.toLowerCase();
-    if (clean.contains('ps')) return 'Preliminary Pages';
-    final match = RegExp(r'(\d+)').firstMatch(clean);
-    if (match != null) {
-      final numStr = match.group(1)!;
-      final chNum = int.tryParse(numStr.length > 2 ? numStr.substring(numStr.length - 2) : numStr) ?? 1;
-      return 'Chapter $chNum';
-    }
-    return 'Chapter 1';
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF222222) : const Color(0xFFF1F1F4),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 26,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              style: GoogleFonts.roboto(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.roboto(
+                fontSize: 12.5,
+                color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  void _showChapterExplorerModal(String bookTitle, List<File> files, NcertBook? book) {
-    final isDark = widget.gamification.isDarkMode;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-          ),
-          margin: const EdgeInsets.all(16),
-          child: GlassSurface(
-            borderRadius: 28,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            bookTitle,
-                            style: GoogleFonts.outfit(fontSize: 19, fontWeight: FontWeight.bold),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            '${files.length} Offline Chapter PDFs • Local Disk Cache',
-                            style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.primaryTeal),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
+  Widget _buildPillTab({
+    required int index,
+    required String title,
+    required int count,
+    required Color dotColor,
+    required bool isDark,
+  }) {
+    final isSel = _selectedSegmentIndex == index;
+    final bg = isSel
+        ? (isDark ? Colors.white : const Color(0xFF18181B))
+        : (isDark ? AppTheme.darkCard : const Color(0xFFF1F1F4));
+    final textCol = isSel
+        ? (isDark ? Colors.black : Colors.white)
+        : (isDark ? AppTheme.darkTextSecondary : const Color(0xFF374151));
+
+    return GestureDetector(
+      onTap: () {
+        _tabController.animateTo(index);
+        setState(() => _selectedSegmentIndex = index);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: isSel
+              ? null
+              : Border.all(
+                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                  width: 1.0,
                 ),
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: files.length,
-                    itemBuilder: (ctx, idx) {
-                      final f = files[idx];
-                      final chTitle = _getChapterTitleFromFileName(f.path);
-                      final fName = f.path.split(RegExp(r'[/\\]')).last;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: GlassCard(
-                          borderRadius: 16,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _openOfflinePdfFile(f, bookTitle, chTitle, book);
-                          },
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryTeal.withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.primaryTeal, size: 20),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      chTitle,
-                                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold),
-                                    ),
-                                    Text(
-                                      '$fName • Offline Ready (0 Network Calls)',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.play_circle_fill_rounded, color: AppTheme.primaryTeal, size: 22),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isSel ? textCol : dotColor,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
+            const SizedBox(width: 6),
+            Text(
+              '$title ($count)',
+              style: GoogleFonts.roboto(
+                fontSize: 12.5,
+                fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                color: textCol,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -246,534 +246,281 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     final isDark = widget.gamification.isDarkMode;
     final bookmarks = widget.gamification.bookmarks;
     final favoriteBooks = _getFavoriteBooksList();
-    final isDesktop = AppResponsive.isDesktop(context);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: MaxContentConstraint(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header Title
+        Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header Title with Expanded text to fix overflow bug
-              Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Library & Vault 📚',
-                            style: GoogleFonts.outfit(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                            ),
-                          ),
-                          Text(
-                            'Offline PDF downloads, favorites & bookmarks • $_totalStorageString',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                    Text(
+                      'Library & Vault',
+                      style: GoogleFonts.roboto(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                        letterSpacing: -0.5,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryTeal),
-                      onPressed: _loadCachedBooks,
-                      tooltip: 'Sync Local Vault',
+                    const SizedBox(height: 2),
+                    Text(
+                      'Offline downloads, favorites & bookmarks • $_totalStorageString',
+                      style: GoogleFonts.roboto(
+                        fontSize: 12,
+                        color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-
-              // 3-Segment Control Bar (Downloaded, Favorites, Bookmarks)
-              GlassSegmentedControl(
-                selectedIndex: _selectedSegmentIndex,
-                onSegmentSelected: (index) {
-                  setState(() {
-                    _selectedSegmentIndex = index;
-                  });
-                  _tabController.animateTo(index);
-                },
-                segments: [
-                  GlassSegmentItem(
-                    label: 'Downloaded',
-                    icon: Icons.offline_pin_rounded,
-                    badgeText: _cachedBooks.isNotEmpty ? '${_cachedBooks.length}' : null,
-                  ),
-                  GlassSegmentItem(
-                    label: 'Favorites',
-                    icon: Icons.favorite_rounded,
-                    badgeText: favoriteBooks.isNotEmpty ? '${favoriteBooks.length}' : null,
-                  ),
-                  GlassSegmentItem(
-                    label: 'Bookmarks',
-                    icon: Icons.bookmark_rounded,
-                    badgeText: bookmarks.isNotEmpty ? '${bookmarks.length}' : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Views
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    // Tab 0: Downloaded Books (Guaranteed Offline PDF reading without API calls)
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal))
-                        : _cachedBooks.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.cloud_download_rounded, size: 54, color: AppTheme.primaryTeal),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'No Offline Downloads Yet',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Downloaded books appear here and open 100% offline from local disk',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : isDesktop
-                                ? Row(
-                                    children: [
-                                      // Left Book List
-                                      SizedBox(
-                                        width: 360,
-                                        child: ListView.builder(
-                                          padding: const EdgeInsets.only(left: 20, right: 10, bottom: 90),
-                                          itemCount: _cachedBooks.length,
-                                          itemBuilder: (context, idx) {
-                                            final item = _cachedBooks[idx];
-                                            final isSel = _selectedDesktopBook?['code'] == item['code'];
-                                            final files = item['files'] as List<File>;
-                                            return Container(
-                                              margin: const EdgeInsets.only(bottom: 10),
-                                              child: GlassCard(
-                                                borderRadius: 18,
-                                                borderColor: isSel ? AppTheme.primaryTeal : null,
-                                                onTap: () {
-                                                  setState(() => _selectedDesktopBook = item);
-                                                },
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.offline_pin_rounded,
-                                                      color: isSel ? AppTheme.primaryTeal : Colors.grey,
-                                                    ),
-                                                    const SizedBox(width: 12),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            item['title'] as String,
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                                                          ),
-                                                          Text(
-                                                            '${files.length} Offline PDFs',
-                                                            style: GoogleFonts.plusJakartaSans(
-                                                              fontSize: 11,
-                                                              color: AppTheme.primaryTeal,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-
-                                      // Right Detail Pane
-                                      Expanded(
-                                        child: _selectedDesktopBook == null
-                                            ? const SizedBox.shrink()
-                                            : Padding(
-                                                padding: const EdgeInsets.only(right: 20, bottom: 90),
-                                                child: GlassCard(
-                                                  borderRadius: 24,
-                                                  padding: const EdgeInsets.all(24),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        _selectedDesktopBook!['title'] as String,
-                                                        style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold),
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        'Offline Local Storage • Instant Reading (0 Network Calls)',
-                                                        style: GoogleFonts.plusJakartaSans(color: AppTheme.primaryTeal),
-                                                      ),
-                                                      const SizedBox(height: 16),
-                                                      Text(
-                                                        'Downloaded Chapter Files (${(_selectedDesktopBook!['files'] as List).length}):',
-                                                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
-                                                      ),
-                                                      const SizedBox(height: 10),
-                                                      Expanded(
-                                                        child: ListView.builder(
-                                                          itemCount: (_selectedDesktopBook!['files'] as List<File>).length,
-                                                          itemBuilder: (ctx, fIdx) {
-                                                            final f = (_selectedDesktopBook!['files'] as List<File>)[fIdx];
-                                                            final chTitle = _getChapterTitleFromFileName(f.path);
-                                                            final fName = f.path.split(RegExp(r'[/\\]')).last;
-                                                            return Container(
-                                                              margin: const EdgeInsets.only(bottom: 8),
-                                                              child: ListTile(
-                                                                tileColor: isDark
-                                                                    ? AppTheme.darkSurface.withValues(alpha: 0.6)
-                                                                    : Colors.grey.shade100,
-                                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                                                leading: const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.primaryTeal),
-                                                                title: Text(
-                                                                  chTitle,
-                                                                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold),
-                                                                ),
-                                                                subtitle: Text(
-                                                                  '$fName • Local Disk Cache',
-                                                                  style: GoogleFonts.plusJakartaSans(fontSize: 10.5),
-                                                                ),
-                                                                trailing: const Icon(Icons.play_circle_fill_rounded, color: AppTheme.primaryTeal),
-                                                                onTap: () {
-                                                                  _openOfflinePdfFile(
-                                                                    f,
-                                                                    _selectedDesktopBook!['title'] as String,
-                                                                    chTitle,
-                                                                    _selectedDesktopBook!['book'] as NcertBook?,
-                                                                  );
-                                                                },
-                                                              ),
-                                                            );
-                                                          },
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 12),
-                                                      GlassButton(
-                                                        label: 'Clear Offline Vault Files',
-                                                        icon: Icons.delete_outline_rounded,
-                                                        variant: GlassButtonVariant.ghost,
-                                                        onPressed: () => _clearBookCache(
-                                                          _selectedDesktopBook!['code'] as String,
-                                                          _selectedDesktopBook!['title'] as String,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                      ),
-                                    ],
-                                  )
-                                : ListView.builder(
-                                    padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
-                                    itemCount: _cachedBooks.length,
-                                    itemBuilder: (context, idx) {
-                                      final item = _cachedBooks[idx];
-                                      final code = item['code'] as String;
-                                      final title = item['title'] as String;
-                                      final files = item['files'] as List<File>;
-                                      final book = item['book'] as NcertBook?;
-
-                                      return Container(
-                                        margin: const EdgeInsets.only(bottom: 12),
-                                        child: GlassCard(
-                                          borderRadius: 20,
-                                          padding: const EdgeInsets.all(16),
-                                          onTap: () => _showChapterExplorerModal(title, files, book),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 46,
-                                                height: 46,
-                                                decoration: BoxDecoration(
-                                                  color: AppTheme.primaryTeal.withValues(alpha: 0.18),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: const Icon(
-                                                  Icons.offline_pin_rounded,
-                                                  color: AppTheme.primaryTeal,
-                                                  size: 24,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 14),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      title,
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: GoogleFonts.outfit(
-                                                        fontSize: 16,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 3),
-                                                    Text(
-                                                      '${files.length} Offline Files • Tap to select chapter',
-                                                      style: GoogleFonts.plusJakartaSans(
-                                                        fontSize: 12,
-                                                        color: AppTheme.primaryTeal,
-                                                        fontWeight: FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Icon(
-                                                Icons.chevron_right_rounded,
-                                                color: AppTheme.primaryTeal,
-                                                size: 24,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              IconButton(
-                                                icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.accentRose),
-                                                onPressed: () => _clearBookCache(code, title),
-                                                tooltip: 'Delete downloaded book',
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-
-                    // Tab 1: Favorite Books Section
-                    favoriteBooks.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.favorite_border_rounded, size: 54, color: AppTheme.accentRose),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No Favorite Books Yet',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Tap the heart icon ❤️ on any book to add it to your favorites',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
-                            itemCount: favoriteBooks.length,
-                            itemBuilder: (context, idx) {
-                              final book = favoriteBooks[idx];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: GlassCard(
-                                  borderRadius: 20,
-                                  padding: const EdgeInsets.all(16),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => BookDetailScreen(
-                                          book: book,
-                                          gamification: widget.gamification,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.accentRose.withValues(alpha: 0.18),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.favorite_rounded,
-                                          color: AppTheme.accentRose,
-                                          size: 22,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              book.text,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Class ${book.className} • ${book.subject.toUpperCase()}',
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontSize: 12,
-                                                color: AppTheme.accentRose,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.favorite_rounded, color: AppTheme.accentRose),
-                                        onPressed: () {
-                                          widget.gamification.toggleFavorite(book.code);
-                                          CustomSnackBar.showInfo(context, 'Removed from favorites');
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-
-                    // Tab 2: Saved Bookmarks
-                    bookmarks.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.bookmark_border_rounded, size: 54, color: AppTheme.accentAmber),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No Saved Bookmarks',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Tap star/bookmark inside PDF viewer to save pages',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12,
-                                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
-                            itemCount: bookmarks.length,
-                            itemBuilder: (context, idx) {
-                              final b = bookmarks[idx];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: GlassCard(
-                                  borderRadius: 20,
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.accentAmber.withValues(alpha: 0.18),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.star_rounded,
-                                          color: AppTheme.accentAmber,
-                                          size: 22,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              b.bookTitle,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '${b.chapterTitle} • Page ${b.pageNumber}',
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontSize: 12,
-                                                color: AppTheme.accentAmber,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.close_rounded, size: 20, color: AppTheme.accentRose),
-                                        onPressed: () {
-                                          widget.gamification.removeBookmark(b.id);
-                                          CustomSnackBar.showInfo(context, 'Bookmark removed');
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ],
+              IconButton(
+                icon: Icon(
+                  Icons.refresh_rounded,
+                  color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  size: 20,
                 ),
+                onPressed: _loadCachedBooks,
+                tooltip: 'Sync Local Vault',
               ),
             ],
           ),
         ),
-      ),
+
+        // Pill Filter Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                _buildPillTab(
+                  index: 0,
+                  title: 'Downloaded',
+                  count: _cachedBooks.length,
+                  dotColor: const Color(0xFF10B981),
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 8),
+                _buildPillTab(
+                  index: 1,
+                  title: 'Favorites',
+                  count: favoriteBooks.length,
+                  dotColor: const Color(0xFFEF4444),
+                  isDark: isDark,
+                ),
+                const SizedBox(width: 8),
+                _buildPillTab(
+                  index: 2,
+                  title: 'Bookmarks',
+                  count: bookmarks.length,
+                  dotColor: const Color(0xFFF59E0B),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Tab Views
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              // Tab 0: Downloaded Books
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                  : _cachedBooks.isEmpty
+                      ? _buildEmptyState(
+                          icon: Icons.cloud_download_outlined,
+                          title: 'No Offline Downloads Yet',
+                          subtitle: 'Downloaded books will appear here and open 100% offline from local disk.',
+                          isDark: isDark,
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
+                          itemCount: _cachedBooks.length,
+                          itemBuilder: (context, idx) {
+                            final item = _cachedBooks[idx];
+                            final book = item['book'] as NcertBook?;
+                            final files = item['files'] as List<File>;
+                            final title = book?.text ?? (item['code'] as String);
+                            return DownloadedBookTile(
+                              item: item,
+                              isDark: isDark,
+                              onTap: () {
+                                ChapterExplorerModal.show(
+                                  context: context,
+                                  bookTitle: title,
+                                  files: files,
+                                  book: book,
+                                  isDark: isDark,
+                                );
+                              },
+                              onDelete: () => _clearBookCache(item['code'] as String, title),
+                            );
+                          },
+                        ),
+
+              // Tab 1: Favorite Books
+              favoriteBooks.isEmpty
+                  ? _buildEmptyState(
+                      icon: Icons.favorite_border_rounded,
+                      title: 'No Favorites Saved',
+                      subtitle: 'Tap the heart icon on any textbook to pin it to your favorites.',
+                      isDark: isDark,
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final columns = AppResponsive.getGridColumnCount(
+                          context,
+                          availableWidth: constraints.maxWidth,
+                        );
+                        return GridView.builder(
+                          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: columns == 2 ? 0.88 : 0.95,
+                          ),
+                          itemCount: favoriteBooks.length,
+                          itemBuilder: (context, idx) {
+                            final book = favoriteBooks[idx];
+                            return BookCard(
+                              book: book,
+                              gamification: widget.gamification,
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => BookDetailScreen(
+                                      book: book,
+                                      gamification: widget.gamification,
+                                    ),
+                                  ),
+                                );
+                                if (mounted) {
+                                  _loadCachedBooks(showLoading: false);
+                                  setState(() {});
+                                }
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+
+              // Tab 2: Bookmarks
+              bookmarks.isEmpty
+                  ? _buildEmptyState(
+                      icon: Icons.bookmark_border_rounded,
+                      title: 'No Page Bookmarks',
+                      subtitle: 'Bookmarks created while reading will appear here for 1-tap jump back.',
+                      isDark: isDark,
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
+                      itemCount: bookmarks.length,
+                      itemBuilder: (context, idx) {
+                        final bm = bookmarks[idx];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PdfViewerScreen(
+                                      bookTitle: bm.bookTitle,
+                                      chapterTitle: bm.chapterTitle,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.darkCard : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.18 : 0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.bookmark_rounded,
+                                        color: Color(0xFFF59E0B),
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            bm.bookTitle,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${bm.chapterTitle} • Page ${bm.pageNumber}',
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 11.5,
+                                              color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close_rounded, size: 16),
+                                      onPressed: () {
+                                        widget.gamification.toggleBookmark(bm);
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

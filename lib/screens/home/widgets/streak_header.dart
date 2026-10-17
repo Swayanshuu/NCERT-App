@@ -63,7 +63,7 @@ class StreakHeader extends StatelessWidget {
                     children: [
                       Text(
                         '${_getGreeting()}, ',
-                        style: GoogleFonts.plusJakartaSans(
+                        style: GoogleFonts.roboto(
                           fontSize: 12,
                           color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
                         ),
@@ -113,11 +113,15 @@ class StreakHeader extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Text('🔥', style: TextStyle(fontSize: 14)),
+                  const Icon(
+                    Icons.local_fire_department_rounded,
+                    color: AppTheme.accentOrange,
+                    size: 15,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     '${gamification.streak}d',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.roboto(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.accentOrange,

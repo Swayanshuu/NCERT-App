@@ -3,9 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:ncert_books_app/models/ncert_book.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
+import 'package:ncert_books_app/services/pdf_cache_service.dart';
 import 'package:ncert_books_app/theme/app_theme.dart';
-import 'package:ncert_books_app/widgets/liquid/liquid_card.dart';
-import 'package:ncert_books_app/widgets/painters/subject_background_painter.dart';
 
 class BookCard extends StatelessWidget {
   final NcertBook book;
@@ -21,209 +20,186 @@ class BookCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = gamification.isDarkMode;
     final isFav = gamification.isFavorite(book.code);
-    final subjectColor = AppTheme.getSubjectColor(book.subject);
-    final subjectIcon = AppTheme.getSubjectIcon(book.subject);
+    final isCached = PdfCacheService().isBookCachedSync(book.code);
 
-    return LiquidCard(
-      onTap: onTap,
-      borderRadius: 24,
-      padding: EdgeInsets.zero,
-      blurSigma: 16,
-      borderColor: isDark
-          ? Colors.white.withValues(alpha: 0.14)
-          : AppTheme.lightBorder,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Cover Graphic Section
-          Expanded(
-            flex: 50,
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  child: CustomPaint(
-                    size: Size.infinite,
-                    painter: SubjectBackgroundPainter(
-                      subject: book.subject,
-                      isDark: isDark,
-                    ),
-                  ),
-                ),
-
-                // Class Pill Top Left
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.black.withValues(alpha: 0.60)
-                          : Colors.white.withValues(alpha: 0.88),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: subjectColor.withValues(alpha: 0.5),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      'Class ${book.className}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: subjectColor,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Favorite Heart Top Right
-                Positioned(
-                  top: 2,
-                  right: 2,
-                  child: IconButton(
-                    constraints: const BoxConstraints(),
-                    padding: const EdgeInsets.all(5),
-                    icon: Icon(
-                      isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      color: isFav ? AppTheme.accentRose : (isDark ? Colors.white70 : Colors.black45),
-                      size: 19,
-                    ),
-                    onPressed: () {
-                      gamification.toggleFavorite(book.code);
-                    },
-                  ),
-                ),
-
-                // Center Big Subject Icon
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: subjectColor.withValues(alpha: 0.22),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: subjectColor.withValues(alpha: 0.60),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Icon(
-                      subjectIcon,
-                      color: subjectColor,
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        splashColor: Colors.white.withValues(alpha: 0.05),
+        highlightColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF181818),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFF282828),
+              width: 1.0,
             ),
           ),
-
-          // 2. Book Info Section
-          Expanded(
-            flex: 50,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: subjectColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                book.subject.toUpperCase(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                  color: subjectColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 3),
-
-                        // Book Title
-                        Flexible(
-                          child: AutoSizeText(
-                            book.text,
-                            maxLines: 2,
-                            minFontSize: 9,
-                            maxFontSize: 13,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                              height: 1.15,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Footer Row: Chapters & Action Arrow
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.collections_bookmark_rounded,
-                            size: 12,
-                            color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${book.maxChapterNumber} Chapters',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(4),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Top Row: Minimal Subject Pill & Favorite Heart
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                         decoration: BoxDecoration(
-                          color: subjectColor.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
+                          color: const Color(0xFF222222),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF282828),
+                            width: 0.8,
+                          ),
                         ),
+                        child: Text(
+                          book.subject,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.roboto(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF777777),
+                            letterSpacing: -0.1,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Minimal favorite icon
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        gamification.toggleFavorite(book.code);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(2.0),
                         child: Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 13,
-                          color: subjectColor,
+                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: isFav ? AppTheme.accentRose : const Color(0xFF777777),
+                          size: 19,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Middle: Book Title & Class
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AutoSizeText(
+                        book.text,
+                        maxLines: 2,
+                        minFontSize: 13,
+                        maxFontSize: 15.5,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.roboto(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          height: 1.25,
+                          letterSpacing: -0.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Class ${book.className}',
+                        style: GoogleFonts.roboto(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF777777),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Bottom Row: Saved indicator, Chapters & Minimal circular arrow
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        if (isCached) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF222222),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.check_rounded,
+                                  size: 11,
+                                  color: Color(0xFF10B981),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Saved',
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          '${book.maxChapterNumber} Chs',
+                          style: GoogleFonts.roboto(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF777777),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Sleek monochrome arrow button
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF222222),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF282828),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

@@ -8,15 +8,13 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ncert_books_app/models/ncert_book.dart';
-import 'package:ncert_books_app/models/pdf_bookmark.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
+import 'package:ncert_books_app/services/pdf_cache_service.dart';
 import 'package:ncert_books_app/widgets/custom_snack_bar.dart';
-import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
 import 'package:ncert_books_app/widgets/glass/glass_surface.dart';
 import 'package:ncert_books_app/widgets/glass/glass_button.dart';
 import 'package:ncert_books_app/widgets/glass/glass_toolbar.dart';
-import 'package:ncert_books_app/widgets/painters/reader_background_painter.dart';
 
 class PdfViewerScreen extends StatefulWidget {
   final File? pdfFile;
@@ -43,9 +41,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   final FocusNode _focusNode = FocusNode();
   int _currentPage = 1;
   int _totalPages = 1;
-  bool _isBookmarked = false;
-  String _readingFilter = 'day'; // 'day', 'sepia', 'night'
   bool _showDesktopDrawer = true;
+  bool _isDownloaded = false;
+  bool _isDownloading = false;
 
   File? _effectivePdfFile;
   String? _effectivePdfUrl;
@@ -57,7 +55,14 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     super.initState();
     GamificationService().addListener(_onThemeChanged);
     GamificationService().recordReadingSession();
+    _checkDownloadStatus();
     _loadPdf();
+  }
+
+  void _checkDownloadStatus() {
+    if (widget.book != null) {
+      _isDownloaded = PdfCacheService().isBookCachedSync(widget.book!.code);
+    }
   }
 
   @override
@@ -69,6 +74,71 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   void _onThemeChanged() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _downloadToApp() async {
+    if (_isDownloaded) {
+      CustomSnackBar.showInfo(
+        context,
+        'This book is already saved offline in your vault.',
+      );
+      return;
+    }
+    if (_isDownloading) {
+      CustomSnackBar.showInfo(context, 'Download is already in progress.');
+      return;
+    }
+
+    setState(() => _isDownloading = true);
+
+    try {
+      if (widget.book != null) {
+        final files = await PdfCacheService().downloadAndCacheBook(
+          widget.book!,
+          onProgress: (p, s) {},
+        );
+        if (mounted) {
+          setState(() {
+            _isDownloaded = files.isNotEmpty;
+            _isDownloading = false;
+          });
+          CustomSnackBar.showSuccess(context, 'Saved offline to Library');
+        }
+      } else if (_effectivePdfFile != null) {
+        final dir = await getApplicationSupportDirectory();
+        final targetDir = Directory(
+          '${dir.path}/.ncert_private_vault/${widget.bookTitle}',
+        );
+        if (!await targetDir.exists()) {
+          await targetDir.create(recursive: true);
+        }
+        final targetFile = File('${targetDir.path}/${widget.chapterTitle}.pdf');
+        await _effectivePdfFile!.copy(targetFile.path);
+        if (mounted) {
+          setState(() {
+            _isDownloaded = true;
+            _isDownloading = false;
+          });
+          CustomSnackBar.showSuccess(context, 'Saved offline to Library');
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isDownloading = false);
+          CustomSnackBar.showError(
+            context,
+            'PDF file not available to save offline.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+        CustomSnackBar.showError(
+          context,
+          'Failed to save offline. Please try again.',
+        );
+      }
+    }
   }
 
   Future<void> _loadPdf() async {
@@ -97,7 +167,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
     if (kIsWeb) {
       if (pdfUrl != null && pdfUrl.isNotEmpty) {
-        final targetUrl = pdfUrl.startsWith('http:') ? pdfUrl.replaceFirst('http:', 'https:') : pdfUrl;
+        final targetUrl = pdfUrl.startsWith('http:')
+            ? pdfUrl.replaceFirst('http:', 'https:')
+            : pdfUrl;
         if (mounted) {
           setState(() {
             _effectivePdfUrl = targetUrl;
@@ -118,7 +190,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     // 2. Fetch online PDF with desktop browser headers
     if (pdfUrl != null && pdfUrl.isNotEmpty) {
       try {
-        final targetUrl = pdfUrl.startsWith('http:') ? pdfUrl.replaceFirst('http:', 'https:') : pdfUrl;
+        final targetUrl = pdfUrl.startsWith('http:')
+            ? pdfUrl.replaceFirst('http:', 'https:')
+            : pdfUrl;
         final filename = targetUrl.split('/').last;
         final dir = await getTemporaryDirectory();
         final localFile = File('${dir.path}/$filename');
@@ -133,14 +207,17 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           return;
         }
 
-        final res = await http.get(
-          Uri.parse(targetUrl),
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'application/pdf,*/*',
-            'Referer': 'https://ncert.nic.in/',
-          },
-        ).timeout(const Duration(seconds: 12));
+        final res = await http
+            .get(
+              Uri.parse(targetUrl),
+              headers: {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': 'application/pdf,*/*',
+                'Referer': 'https://ncert.nic.in/',
+              },
+            )
+            .timeout(const Duration(seconds: 12));
 
         if (res.statusCode == 200 && res.bodyBytes.length > 2000) {
           await localFile.writeAsBytes(res.bodyBytes);
@@ -160,10 +237,16 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     // 3. Fallback: Generate guaranteed, instant valid NCERT digital PDF file locally
     try {
       final dir = await getTemporaryDirectory();
-      final cleanName = widget.chapterTitle.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      final cleanName = widget.chapterTitle.replaceAll(
+        RegExp(r'[^a-zA-Z0-9]'),
+        '_',
+      );
       final fallbackFile = File('${dir.path}/fallback_$cleanName.pdf');
 
-      final bytes = _generateFallbackPdfBytes(widget.bookTitle, widget.chapterTitle);
+      final bytes = _generateFallbackPdfBytes(
+        widget.bookTitle,
+        widget.chapterTitle,
+      );
       await fallbackFile.writeAsBytes(bytes);
 
       if (mounted) {
@@ -182,10 +265,14 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     }
   }
 
-  static Uint8List _generateFallbackPdfBytes(String bookTitle, String chapterTitle) {
+  static Uint8List _generateFallbackPdfBytes(
+    String bookTitle,
+    String chapterTitle,
+  ) {
     final cleanBook = bookTitle.replaceAll(RegExp(r'[^\x20-\x7E]'), '');
     final cleanChapter = chapterTitle.replaceAll(RegExp(r'[^\x20-\x7E]'), '');
-    final pdfContent = '''%PDF-1.4
+    final pdfContent =
+        '''%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
 endobj
@@ -264,104 +351,6 @@ startxref
     return Uint8List.fromList(utf8.encode(pdfContent));
   }
 
-  void _showPaperThemeModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => SafeArea(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: GlassSurface(
-            borderRadius: 32,
-            padding: const EdgeInsets.all(24),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Reader Paper Theme', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildThemeOption('day', 'Day Paper', const Color(0xFFF8FAFC), Colors.black87),
-                      const SizedBox(width: 12),
-                      _buildThemeOption('sepia', 'Sepia Warm', const Color(0xFFFBF0D9), const Color(0xFF5C4033)),
-                      const SizedBox(width: 12),
-                      _buildThemeOption('night', 'Dark Slate', const Color(0xFF0F172A), Colors.white),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemeOption(String mode, String label, Color bg, Color textCol) {
-    final isSel = _readingFilter == mode;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() => _readingFilter = mode);
-          Navigator.pop(context);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSel ? AppTheme.primaryTeal : Colors.grey.shade400,
-              width: isSel ? 2 : 1,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: textCol, fontSize: 13),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _toggleBookmark() {
-    final bookCode = widget.book?.code ?? widget.bookTitle;
-    final bm = PdfBookmark(
-      id: '${bookCode}_${widget.chapterTitle}_$_currentPage',
-      bookCode: bookCode,
-      bookTitle: widget.bookTitle,
-      chapterTitle: widget.chapterTitle,
-      pageNumber: _currentPage,
-      bookmarkedAt: DateTime.now(),
-    );
-
-    GamificationService().toggleBookmark(bm);
-    final isNowBookmarked = GamificationService().isPageBookmarked(bookCode, widget.chapterTitle, _currentPage);
-
-    setState(() => _isBookmarked = isNowBookmarked);
-
-    if (isNowBookmarked) {
-      CustomSnackBar.showSuccess(context, 'Page $_currentPage Bookmarked! +10 XP 🌟');
-    } else {
-      CustomSnackBar.showInfo(context, 'Bookmark Removed');
-    }
-  }
-
   void _onKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
@@ -385,188 +374,277 @@ startxref
       autofocus: true,
       onKeyEvent: _onKeyEvent,
       child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // Background Paper CustomPainter
-            CustomPaint(
-              size: Size.infinite,
-              painter: ReaderBackgroundPainter(paperMode: _readingFilter),
-            ),
-
-            // Main Reader Body
-            SafeArea(
-              child: Row(
-                children: [
-                  // Desktop Drawer (if active)
-                  if (isDesktop && _showDesktopDrawer && widget.book != null)
-                    Container(
-                      width: 260,
-                      margin: const EdgeInsets.all(12),
-                      child: GlassSurface(
-                        borderRadius: 24,
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Chapters Navigator',
-                              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: widget.book!.maxChapterNumber,
-                                itemBuilder: (ctx, idx) {
-                                  final chNum = idx + 1;
-                                  final isSel = widget.chapterTitle.contains('$chNum');
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 6),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: ListTile(
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        tileColor: isSel ? AppTheme.primaryTeal.withValues(alpha: 0.2) : null,
-                                        leading: CircleAvatar(
-                                          radius: 12,
-                                          backgroundColor: isSel ? AppTheme.primaryTeal : Colors.grey.shade300,
-                                          child: Text('$chNum', style: const TextStyle(fontSize: 11, color: Colors.white)),
-                                        ),
-                                        title: Text(
-                                          'Chapter $chNum',
-                                          style: GoogleFonts.outfit(fontSize: 13, fontWeight: isSel ? FontWeight.bold : FontWeight.w500),
+        backgroundColor: const Color(0xFF101010),
+        body: SafeArea(
+          child: Row(
+            children: [
+              // Desktop Drawer (if active)
+              if (isDesktop && _showDesktopDrawer && widget.book != null)
+                Container(
+                  width: 260,
+                  margin: const EdgeInsets.all(12),
+                  child: GlassSurface(
+                    borderRadius: 24,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Chapters Navigator',
+                          style: GoogleFonts.roboto(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: widget.book!.maxChapterNumber,
+                            itemBuilder: (ctx, idx) {
+                              final chNum = idx + 1;
+                              final isSel = widget.chapterTitle.contains(
+                                '$chNum',
+                              );
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: ListTile(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    tileColor: isSel
+                                        ? const Color(0xFF181818)
+                                        : null,
+                                    leading: CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: isSel
+                                          ? Colors.white
+                                          : const Color(0xFF282828),
+                                      child: Text(
+                                        '$chNum',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSel
+                                              ? Colors.black
+                                              : Colors.white,
                                         ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // Main View Area
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // Top Glass Toolbar
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Row(
-                            children: [
-                              if (isDesktop && widget.book != null)
-                                IconButton(
-                                  icon: Icon(_showDesktopDrawer ? Icons.menu_open_rounded : Icons.menu_rounded),
-                                  onPressed: () => setState(() => _showDesktopDrawer = !_showDesktopDrawer),
-                                ),
-                              Expanded(
-                                child: GlassToolbar(
-                                  title: widget.bookTitle,
-                                  subtitle: widget.chapterTitle,
-                                  isBookmarked: _isBookmarked,
-                                  onBack: () => Navigator.pop(context),
-                                  onBookmarkToggle: _toggleBookmark,
-                                  onPaletteTap: _showPaperThemeModal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // PDF Content View
-                        Expanded(
-                          child: _isLoadingPdf
-                              ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal))
-                              : _pdfLoadError != null
-                                  ? Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.error_outline_rounded, size: 54, color: AppTheme.accentRose),
-                                          const SizedBox(height: 12),
-                                          Text(_pdfLoadError!, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
-                                          const SizedBox(height: 16),
-                                          GlassButton(
-                                            label: 'Retry Loading',
-                                            onPressed: _loadPdf,
-                                          ),
-                                        ],
+                                    title: Text(
+                                      'Chapter $chNum',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 13,
+                                        fontWeight: isSel
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSel
+                                            ? Colors.white
+                                            : const Color(0xFF777777),
                                       ),
-                                    )
-                                  : kIsWeb
-                                      ? PdfViewer.uri(
-                                          Uri.parse(_effectivePdfUrl!),
-                                          controller: _pdfController,
-                                          params: PdfViewerParams(
-                                            onPageChanged: (page) {
-                                              if (page != null && mounted) {
-                                                setState(() => _currentPage = page);
-                                              }
-                                            },
-                                            onViewerReady: (doc, controller) {
-                                              if (mounted) {
-                                                setState(() => _totalPages = doc.pages.length);
-                                              }
-                                            },
-                                          ),
-                                        )
-                                      : PdfViewer.file(
-                                          _effectivePdfFile!.path,
-                                          controller: _pdfController,
-                                          params: PdfViewerParams(
-                                            onPageChanged: (page) {
-                                              if (page != null && mounted) {
-                                                setState(() => _currentPage = page);
-                                              }
-                                            },
-                                            onViewerReady: (doc, controller) {
-                                              if (mounted) {
-                                                setState(() => _totalPages = doc.pages.length);
-                                              }
-                                            },
-                                          ),
-                                        ),
-                        ),
-
-                        // Floating Bottom Page Navigation Slider Bar
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          child: GlassSurface(
-                            height: 54,
-                            borderRadius: 27,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.chevron_left_rounded),
-                                  onPressed: _currentPage > 1
-                                      ? () => _pdfController.goToPage(pageNumber: _currentPage - 1)
-                                      : null,
+                                    ),
+                                  ),
                                 ),
-                                Text(
-                                  'Page $_currentPage of $_totalPages',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.chevron_right_rounded),
-                                  onPressed: _currentPage < _totalPages
-                                      ? () => _pdfController.goToPage(pageNumber: _currentPage + 1)
-                                      : null,
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
+
+              // Main View Area
+              Expanded(
+                child: Column(
+                  children: [
+                    // Top Toolbar (Back button, Title card, Download to App button)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          if (isDesktop && widget.book != null)
+                            IconButton(
+                              icon: Icon(
+                                _showDesktopDrawer
+                                    ? Icons.menu_open_rounded
+                                    : Icons.menu_rounded,
+                                color: Colors.white,
+                              ),
+                              onPressed: () => setState(
+                                () => _showDesktopDrawer = !_showDesktopDrawer,
+                              ),
+                            ),
+                          Expanded(
+                            child: GlassToolbar(
+                              title: widget.bookTitle,
+                              subtitle: widget.chapterTitle,
+                              onBack: () => Navigator.pop(context),
+                              onDownload: _downloadToApp,
+                              isDownloaded: _isDownloaded,
+                              isDownloading: _isDownloading,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // PDF Content View
+                    Expanded(
+                      child: _isLoadingPdf
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            )
+                          : _pdfLoadError != null
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    size: 54,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _pdfLoadError!,
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  GlassButton(
+                                    label: 'Retry Loading',
+                                    onPressed: _loadPdf,
+                                  ),
+                                ],
+                              ),
+                            )
+                          : kIsWeb
+                          ? PdfViewer.uri(
+                              Uri.parse(_effectivePdfUrl!),
+                              controller: _pdfController,
+                              params: PdfViewerParams(
+                                onPageChanged: (page) {
+                                  if (page != null && mounted) {
+                                    setState(() => _currentPage = page);
+                                  }
+                                },
+                                onViewerReady: (doc, controller) {
+                                  if (mounted) {
+                                    setState(
+                                      () => _totalPages = doc.pages.length,
+                                    );
+                                  }
+                                },
+                              ),
+                            )
+                          : PdfViewer.file(
+                              _effectivePdfFile!.path,
+                              controller: _pdfController,
+                              params: PdfViewerParams(
+                                onPageChanged: (page) {
+                                  if (page != null && mounted) {
+                                    setState(() => _currentPage = page);
+                                  }
+                                },
+                                onViewerReady: (doc, controller) {
+                                  if (mounted) {
+                                    setState(
+                                      () => _totalPages = doc.pages.length,
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                    ),
+
+                    // Floating Bottom Page Navigation Slider Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      child: Center(
+                        child: Container(
+                          height: 44,
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF181818),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(
+                              color: const Color(0xFF282828),
+                              width: 1.0,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x66000000),
+                                blurRadius: 16,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.chevron_left_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                                onPressed: _currentPage > 1
+                                    ? () => _pdfController.goToPage(
+                                        pageNumber: _currentPage - 1,
+                                      )
+                                    : null,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Text(
+                                  'Page $_currentPage of $_totalPages',
+                                  style: GoogleFonts.roboto(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                                onPressed: _currentPage < _totalPages
+                                    ? () => _pdfController.goToPage(
+                                        pageNumber: _currentPage + 1,
+                                      )
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

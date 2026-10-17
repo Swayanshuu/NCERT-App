@@ -5,12 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
 import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
-import 'package:ncert_books_app/widgets/confetti_overlay.dart';
 import 'package:ncert_books_app/widgets/custom_snack_bar.dart';
-import 'package:ncert_books_app/widgets/glass/glass_card.dart';
-import 'package:ncert_books_app/widgets/liquid/liquid_progress.dart';
-import 'package:ncert_books_app/widgets/painters/progress_background_painter.dart';
 import 'package:ncert_books_app/screens/progress/bloc/progress_bloc.dart';
+import 'package:ncert_books_app/screens/progress/widgets/hero_level_card.dart';
+import 'package:ncert_books_app/screens/progress/widgets/quest_tile.dart';
+import 'package:ncert_books_app/screens/progress/widgets/achievement_badge_card.dart';
 
 class ProgressScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -55,808 +54,192 @@ class _ProgressScreenState extends State<ProgressScreen>
       _confettiController.play();
       CustomSnackBar.showReward(
         context,
-        '🎉 Daily Reward Claimed! +50 XP added!',
+        'Daily Reward Claimed! +50 XP added!',
       );
     } else {
       CustomSnackBar.showInfo(
         context,
-        '⌛ Next chest available in ${widget.gamification.hoursUntilNextBonus} hours!',
+        'Next chest available in ${widget.gamification.hoursUntilNextBonus} hours',
       );
+    }
+  }
+
+  IconData _getBadgeIcon(String badge) {
+    switch (badge) {
+      case 'Book Explorer':
+        return Icons.explore_rounded;
+      case 'Super Reader':
+        return Icons.auto_stories_rounded;
+      case 'Master Mind':
+        return Icons.psychology_rounded;
+      case 'Streak Champ':
+        return Icons.local_fire_department_rounded;
+      case 'Book Collector':
+        return Icons.collections_bookmark_rounded;
+      default:
+        return Icons.military_tech_rounded;
+    }
+  }
+
+  Color _getBadgeColor(String badge) {
+    switch (badge) {
+      case 'Book Explorer':
+        return const Color(0xFF38BDF8);
+      case 'Super Reader':
+        return const Color(0xFF34D399);
+      case 'Master Mind':
+        return const Color(0xFFA78BFA);
+      case 'Streak Champ':
+        return const Color(0xFFF97316);
+      case 'Book Collector':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFFEAB308);
+    }
+  }
+
+  String _getBadgeDescription(String badge) {
+    switch (badge) {
+      case 'Book Explorer':
+        return 'Discovered first NCERT book';
+      case 'Super Reader':
+        return 'Earned 100+ XP in reading';
+      case 'Master Mind':
+        return 'Reached master tier with 300+ XP';
+      case 'Streak Champ':
+        return 'Maintained a 3-day active streak';
+      case 'Book Collector':
+        return 'Bookmarked 5 or more books';
+      default:
+        return 'Achievement unlocked';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isDark = widget.gamification.isDarkMode;
+    final isTablet = AppResponsive.isTablet(context);
+    final quests = widget.gamification.dailyQuests;
+    final badges = widget.gamification.unlockedBadges;
+
     return BlocBuilder<ProgressBloc, ProgressState>(
       builder: (context, state) {
-        final isDark = widget.gamification.isDarkMode;
-        final isDesktop = AppResponsive.isDesktop(context);
-        final xpProgress = (widget.gamification.levelProgressXp) / 100.0;
-        final quests = widget.gamification.dailyQuests;
-
-        return ConfettiOverlay(
-          controller: _confettiController,
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Stack(
+        return MaxContentConstraint(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 12,
+              bottom: 90,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomPaint(
-                  size: Size.infinite,
-                  painter: ProgressBackgroundPainter(isDark: isDark),
-                ),
-                SafeArea(
-                  child: MaxContentConstraint(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 12,
-                        bottom: 90,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header Title
-                          Text(
-                            'Learning Journey 🏆',
-                            style: GoogleFonts.outfit(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? AppTheme.darkTextPrimary
-                                  : AppTheme.lightTextPrimary,
-                            ),
-                          ),
-                          Text(
-                            'Track XP, streaks, level titles & trophies',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 13,
-                              color: isDark
-                                  ? AppTheme.darkTextMuted
-                                  : AppTheme.lightTextMuted,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          if (isDesktop)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Desktop Left Column
-                                Expanded(
-                                  flex: 5,
-                                  child: Column(
-                                    children: [
-                                      // Hero Level Card
-                                      GlassCard(
-                                        borderRadius: 28,
-                                        padding: const EdgeInsets.all(20),
-                                        child: Column(
-                                          children: [
-                                            Row(
-                                              children: [
-                                                LiquidProgressRing(
-                                                  progress: xpProgress,
-                                                  size: 84,
-                                                  strokeWidth: 9,
-                                                  color: AppTheme.accentAmber,
-                                                  centerChild: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Text(
-                                                        'Lvl ${widget.gamification.level}',
-                                                        style:
-                                                            GoogleFonts.outfit(
-                                                              fontSize: 16,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              color: AppTheme
-                                                                  .accentAmber,
-                                                            ),
-                                                      ),
-                                                      Text(
-                                                        '${widget.gamification.xp} XP',
-                                                        style: GoogleFonts.plusJakartaSans(
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: isDark
-                                                              ? AppTheme
-                                                                    .darkTextMuted
-                                                              : AppTheme
-                                                                    .lightTextMuted,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 18),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        widget
-                                                            .gamification
-                                                            .levelTitle,
-                                                        style: GoogleFonts.outfit(
-                                                          fontSize: 19,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: isDark
-                                                              ? AppTheme
-                                                                    .darkTextPrimary
-                                                              : AppTheme
-                                                                    .lightTextPrimary,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        '${100 - widget.gamification.levelProgressXp} XP to Level ${widget.gamification.level + 1}',
-                                                        style: GoogleFonts.plusJakartaSans(
-                                                          fontSize: 12,
-                                                          color: isDark
-                                                              ? AppTheme
-                                                                    .darkTextMuted
-                                                              : AppTheme
-                                                                    .lightTextMuted,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                        height: 10,
-                                                      ),
-                                                      LiquidProgressBar(
-                                                        progress: xpProgress,
-                                                        height: 8,
-                                                        color: AppTheme
-                                                            .accentAmber,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: GlassCard(
-                                              borderRadius: 24,
-                                              padding: const EdgeInsets.all(16),
-                                              child: Column(
-                                                children: [
-                                                  const Text(
-                                                    '🔥',
-                                                    style: TextStyle(
-                                                      fontSize: 32,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 6),
-                                                  Text(
-                                                    '${widget.gamification.streak} Days',
-                                                    style: GoogleFonts.outfit(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          AppTheme.accentOrange,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    'Reading Streak',
-                                                    style: GoogleFonts.plusJakartaSans(
-                                                      fontSize: 11.5,
-                                                      color: isDark
-                                                          ? AppTheme
-                                                                .darkTextMuted
-                                                          : AppTheme
-                                                                .lightTextMuted,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: GlassCard(
-                                              borderRadius: 24,
-                                              padding: const EdgeInsets.all(16),
-                                              onTap: _claimDailyChest,
-                                              child: Column(
-                                                children: [
-                                                  const Text(
-                                                    '🎁',
-                                                    style: TextStyle(
-                                                      fontSize: 32,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 6),
-                                                  Text(
-                                                    widget
-                                                            .gamification
-                                                            .canClaimDailyBonus
-                                                        ? 'Claim Chest!'
-                                                        : 'Claimed',
-                                                    style: GoogleFonts.outfit(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          widget
-                                                              .gamification
-                                                              .canClaimDailyBonus
-                                                          ? AppTheme.accentAmber
-                                                          : AppTheme
-                                                                .primaryTeal,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    widget
-                                                            .gamification
-                                                            .canClaimDailyBonus
-                                                        ? '+50 Free XP'
-                                                        : 'Next in ${widget.gamification.hoursUntilNextBonus}h',
-                                                    style: GoogleFonts.plusJakartaSans(
-                                                      fontSize: 11.5,
-                                                      color: isDark
-                                                          ? AppTheme
-                                                                .darkTextMuted
-                                                          : AppTheme
-                                                                .lightTextMuted,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 20),
-
-                                // Desktop Right Column
-                                Expanded(
-                                  flex: 6,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Daily Missions 🎯',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? AppTheme.darkTextPrimary
-                                              : AppTheme.lightTextPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Column(
-                                        children: quests.map((q) {
-                                          final isComp =
-                                              q['isCompleted'] as bool;
-                                          final rawIcon = q['icon'];
-                                          final title = q['title'] as String;
-                                          final desc = q['desc'] as String;
-                                          final xp = q['xp'] as int;
-
-                                          return Container(
-                                            margin: const EdgeInsets.only(
-                                              bottom: 10,
-                                            ),
-                                            child: GlassCard(
-                                              borderRadius: 20,
-                                              padding: const EdgeInsets.all(14),
-                                              child: Row(
-                                                children: [
-                                                  Container(
-                                                    width: 44,
-                                                    height: 44,
-                                                    decoration: BoxDecoration(
-                                                      color: isComp
-                                                          ? AppTheme.primaryTeal
-                                                                .withValues(
-                                                                  alpha: 0.20,
-                                                                )
-                                                          : AppTheme.accentAmber
-                                                                .withValues(
-                                                                  alpha: 0.15,
-                                                                ),
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: Center(
-                                                      child: rawIcon is IconData
-                                                          ? Icon(
-                                                              rawIcon,
-                                                              size: 22,
-                                                              color: isComp
-                                                                  ? AppTheme
-                                                                        .primaryTeal
-                                                                  : AppTheme
-                                                                        .accentAmber,
-                                                            )
-                                                          : Text(
-                                                              rawIcon?.toString() ??
-                                                                  '🌟',
-                                                              style:
-                                                                  const TextStyle(
-                                                                    fontSize:
-                                                                        22,
-                                                                  ),
-                                                            ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 14),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          title,
-                                                          style: GoogleFonts.outfit(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: isDark
-                                                                ? AppTheme
-                                                                      .darkTextPrimary
-                                                                : AppTheme
-                                                                      .lightTextPrimary,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                          height: 2,
-                                                        ),
-                                                        Text(
-                                                          desc,
-                                                          style: GoogleFonts.plusJakartaSans(
-                                                            fontSize: 11.5,
-                                                            color: isDark
-                                                                ? AppTheme
-                                                                      .darkTextMuted
-                                                                : AppTheme
-                                                                      .lightTextMuted,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                          vertical: 6,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color: isComp
-                                                          ? AppTheme.primaryTeal
-                                                          : AppTheme
-                                                                .accentAmber,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                    child: Text(
-                                                      isComp
-                                                          ? 'DONE ✅'
-                                                          : '+$xp XP',
-                                                      style: GoogleFonts.outfit(
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 1. Hero Level & XP Progress Card
-                                GlassCard(
-                                  borderRadius: 28,
-                                  padding: const EdgeInsets.all(20),
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        children: [
-                                          LiquidProgressRing(
-                                            progress: xpProgress,
-                                            size: 84,
-                                            strokeWidth: 9,
-                                            color: AppTheme.accentAmber,
-                                            centerChild: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  'Lvl ${widget.gamification.level}',
-                                                  style: GoogleFonts.outfit(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: AppTheme.accentAmber,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '${widget.gamification.xp} XP',
-                                                  style:
-                                                      GoogleFonts.plusJakartaSans(
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: isDark
-                                                            ? AppTheme
-                                                                  .darkTextMuted
-                                                            : AppTheme
-                                                                  .lightTextMuted,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 18),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  widget
-                                                      .gamification
-                                                      .levelTitle,
-                                                  style: GoogleFonts.outfit(
-                                                    fontSize: 19,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isDark
-                                                        ? AppTheme
-                                                              .darkTextPrimary
-                                                        : AppTheme
-                                                              .lightTextPrimary,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  '${100 - widget.gamification.levelProgressXp} XP to Level ${widget.gamification.level + 1}',
-                                                  style:
-                                                      GoogleFonts.plusJakartaSans(
-                                                        fontSize: 12,
-                                                        color: isDark
-                                                            ? AppTheme
-                                                                  .darkTextMuted
-                                                            : AppTheme
-                                                                  .lightTextMuted,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 10),
-                                                LiquidProgressBar(
-                                                  progress: xpProgress,
-                                                  height: 8,
-                                                  color: AppTheme.accentAmber,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-
-                                // 2. Streak & Daily Chest Row
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: GlassCard(
-                                        borderRadius: 24,
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          children: [
-                                            const Text(
-                                              '🔥',
-                                              style: TextStyle(fontSize: 32),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              '${widget.gamification.streak} Days',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppTheme.accentOrange,
-                                              ),
-                                            ),
-                                            Text(
-                                              'Reading Streak',
-                                              style:
-                                                  GoogleFonts.plusJakartaSans(
-                                                    fontSize: 11.5,
-                                                    color: isDark
-                                                        ? AppTheme.darkTextMuted
-                                                        : AppTheme
-                                                              .lightTextMuted,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: GlassCard(
-                                        borderRadius: 24,
-                                        padding: const EdgeInsets.all(16),
-                                        onTap: _claimDailyChest,
-                                        child: Column(
-                                          children: [
-                                            const Text(
-                                              '🎁',
-                                              style: TextStyle(fontSize: 32),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              widget
-                                                      .gamification
-                                                      .canClaimDailyBonus
-                                                  ? 'Claim Chest!'
-                                                  : 'Claimed',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color:
-                                                    widget
-                                                        .gamification
-                                                        .canClaimDailyBonus
-                                                    ? AppTheme.accentAmber
-                                                    : AppTheme.primaryTeal,
-                                              ),
-                                            ),
-                                            Text(
-                                              widget
-                                                      .gamification
-                                                      .canClaimDailyBonus
-                                                  ? '+50 Free XP'
-                                                  : 'Next in ${widget.gamification.hoursUntilNextBonus}h',
-                                              style:
-                                                  GoogleFonts.plusJakartaSans(
-                                                    fontSize: 11.5,
-                                                    color: isDark
-                                                        ? AppTheme.darkTextMuted
-                                                        : AppTheme
-                                                              .lightTextMuted,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-
-                                // 3. Daily Quests Section
-                                Text(
-                                  'Daily Missions 🎯',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? AppTheme.darkTextPrimary
-                                        : AppTheme.lightTextPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Column(
-                                  children: quests.map((q) {
-                                    final isComp = q['isCompleted'] as bool;
-                                    final rawIcon = q['icon'];
-                                    final title = q['title'] as String;
-                                    final desc = q['desc'] as String;
-                                    final xp = q['xp'] as int;
-
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      child: GlassCard(
-                                        borderRadius: 20,
-                                        padding: const EdgeInsets.all(14),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 44,
-                                              height: 44,
-                                              decoration: BoxDecoration(
-                                                color: isComp
-                                                    ? AppTheme.primaryTeal
-                                                          .withValues(
-                                                            alpha: 0.20,
-                                                          )
-                                                    : AppTheme.accentAmber
-                                                          .withValues(
-                                                            alpha: 0.15,
-                                                          ),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Center(
-                                                child: rawIcon is IconData
-                                                    ? Icon(
-                                                        rawIcon,
-                                                        size: 22,
-                                                        color: isComp
-                                                            ? AppTheme
-                                                                  .primaryTeal
-                                                            : AppTheme
-                                                                  .accentAmber,
-                                                      )
-                                                    : Text(
-                                                        rawIcon?.toString() ??
-                                                            '🌟',
-                                                        style: const TextStyle(
-                                                          fontSize: 22,
-                                                        ),
-                                                      ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 14),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    title,
-                                                    style: GoogleFonts.outfit(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: isDark
-                                                          ? AppTheme
-                                                                .darkTextPrimary
-                                                          : AppTheme
-                                                                .lightTextPrimary,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    desc,
-                                                    style: GoogleFonts.plusJakartaSans(
-                                                      fontSize: 11.5,
-                                                      color: isDark
-                                                          ? AppTheme
-                                                                .darkTextMuted
-                                                          : AppTheme
-                                                                .lightTextMuted,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 6,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: isComp
-                                                    ? AppTheme.primaryTeal
-                                                    : AppTheme.accentAmber,
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                isComp ? 'DONE ✅' : '+$xp XP',
-                                                style: GoogleFonts.outfit(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 20),
-
-                          // 4. Badges & Achievements
-                          Text(
-                            'Trophies & Badges 🎖️',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? AppTheme.darkTextPrimary
-                                  : AppTheme.lightTextPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: isDesktop ? 4 : 2,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 1.6,
-                                ),
-                            itemCount:
-                                widget.gamification.unlockedBadges.length,
-                            itemBuilder: (context, idx) {
-                              final badge =
-                                  widget.gamification.unlockedBadges[idx];
-                              return GlassCard(
-                                borderRadius: 20,
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      badge.split(' ').last,
-                                      style: const TextStyle(fontSize: 28),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      badge
-                                          .replaceAll(badge.split(' ').last, '')
-                                          .trim(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDark
-                                            ? AppTheme.darkTextPrimary
-                                            : AppTheme.lightTextPrimary,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Unlocked Badge',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10.5,
-                                        color: AppTheme.primaryTeal,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                // Header Title
+                Text(
+                  'Learning Journey',
+                  style: GoogleFonts.roboto(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                    letterSpacing: -0.6,
                   ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Track XP, streaks, level titles & trophies',
+                  style: GoogleFonts.roboto(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppTheme.darkTextMuted
+                        : AppTheme.lightTextMuted,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // 1. Hero Level & Streak Card
+                HeroLevelCard(
+                  level: widget.gamification.level,
+                  xp: widget.gamification.xp,
+                  levelTitle: widget.gamification.levelTitle,
+                  levelProgressXp: widget.gamification.levelProgressXp,
+                  streak: widget.gamification.streak,
+                  canClaimDailyBonus: widget.gamification.canClaimDailyBonus,
+                  hoursUntilNextBonus: widget.gamification.hoursUntilNextBonus,
+                  onClaimBonus: _claimDailyChest,
+                ),
+                const SizedBox(height: 24),
+
+                // 2. Daily Missions Section
+                Text(
+                  'Daily Missions',
+                  style: GoogleFonts.roboto(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Column(
+                  children: quests.map((q) {
+                    final isComp = q['isCompleted'] as bool? ?? false;
+                    final rawIcon = q['icon'];
+                    final title = q['title'] as String? ?? 'Mission';
+                    final desc = q['desc'] as String? ?? '';
+                    final xp = q['xp'] as int? ?? 10;
+
+                    return QuestTile(
+                      title: title,
+                      description: desc,
+                      xp: xp,
+                      isCompleted: isComp,
+                      icon: rawIcon is IconData ? rawIcon : Icons.stars_rounded,
+                      iconColor: isComp
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFF59E0B),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
+                // 3. Trophies & Badges Section
+                Text(
+                  'Trophies & Badges',
+                  style: GoogleFonts.roboto(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: isDark
+                        ? AppTheme.darkTextPrimary
+                        : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isTablet ? 2 : 1,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    mainAxisExtent: 72,
+                  ),
+                  itemCount: badges.length,
+                  itemBuilder: (context, idx) {
+                    final badge = badges[idx];
+                    return AchievementBadgeCard(
+                      title: badge,
+                      description: _getBadgeDescription(badge),
+                      icon: _getBadgeIcon(badge),
+                      iconColor: _getBadgeColor(badge),
+                      isUnlocked: true,
+                    );
+                  },
                 ),
               ],
             ),

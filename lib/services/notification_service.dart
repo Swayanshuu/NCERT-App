@@ -103,7 +103,7 @@ class NotificationService {
       final time12h = tz.TZDateTime.now(tz.local).add(const Duration(hours: 12));
       await _scheduleNotification(
         id: _id12HoursReminder,
-        title: '🦉 Hey $name, your mascot companion misses you!',
+        title: 'Hey $name, time for your study session!',
         body: 'Keep your study momentum going! Spend just 5 minutes reading your NCERT textbooks today.',
         scheduledDate: time12h,
       );
@@ -113,7 +113,7 @@ class NotificationService {
       final streakText = streakDays > 0 ? '$streakDays-Day' : 'Active';
       await _scheduleNotification(
         id: _id22HoursEmergency,
-        title: '🚨 DANGER! Your $streakText Study Streak is About to Expire!',
+        title: 'Reminder: Your $streakText Study Streak is About to Expire!',
         body: 'Only 2 hours left today! Open NCERT Books now to save your hard-earned streak & claim free XP!',
         scheduledDate: time22h,
       );
@@ -122,14 +122,14 @@ class NotificationService {
       if (canClaimBonus) {
         await _showNotification(
           id: _idDailyBonus,
-          title: '🎁 Daily XP Bonus Ready to Claim!',
+          title: 'Daily XP Bonus Ready to Claim!',
           body: 'Hey $name! Your daily +50 XP bonus is waiting. Tap here to claim your reward & level up!',
         );
       } else if (hoursUntilBonus > 0) {
         final bonusTime = tz.TZDateTime.now(tz.local).add(Duration(hours: hoursUntilBonus));
         await _scheduleNotification(
           id: _idDailyBonus,
-          title: '🎁 Daily XP Bonus Unlocked!',
+          title: 'Daily XP Bonus Unlocked!',
           body: 'Your next daily +50 XP reward is ready to claim! Don\'t miss out on leveling up.',
           scheduledDate: bonusTime,
         );

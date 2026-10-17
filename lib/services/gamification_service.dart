@@ -8,22 +8,21 @@ class GamificationService extends ChangeNotifier {
   factory GamificationService() => _instance;
   GamificationService._internal();
 
-  bool _isDarkMode = false;
   bool _isOnboardingCompleted = false;
   String _userClass = '10';
   String _userName = 'Student';
   int _xp = 50;
   int _streak = 1;
-  String _currentAvatar = '🦉 Smart Owl';
+  String _currentAvatar = 'Smart Owl';
   String _lastReadDate = '';
   String _lastDailyBonusDate = '';
   String _lastExploredDate = '';
   String _lastExploredSubject = '';
-  List<String> _unlockedBadges = ['Book Explorer 🌟'];
+  List<String> _unlockedBadges = ['Book Explorer'];
   List<String> _favoriteBookCodes = [];
   List<PdfBookmark> _bookmarks = [];
 
-  bool get isDarkMode => _isDarkMode;
+  bool get isDarkMode => true;
   bool get isOnboardingCompleted => _isOnboardingCompleted;
   String get userClass => _userClass;
   String get userName => _userName;
@@ -38,22 +37,22 @@ class GamificationService extends ChangeNotifier {
 
   String get levelTitle {
     final lvl = level;
-    if (lvl == 1) return 'Little Scholar 🐣';
-    if (lvl == 2) return 'Book Explorer 🧭';
-    if (lvl == 3) return 'Knowledge Knight 🛡️';
-    if (lvl == 4) return 'Master Mind 🧠';
-    if (lvl == 5) return 'Wizard Scholar 🧙‍♂️';
-    return 'Legendary Sage 👑';
+    if (lvl == 1) return 'Little Scholar';
+    if (lvl == 2) return 'Book Explorer';
+    if (lvl == 3) return 'Knowledge Knight';
+    if (lvl == 4) return 'Master Mind';
+    if (lvl == 5) return 'Wizard Scholar';
+    return 'Legendary Sage';
   }
 
   String get levelSymbol {
     final lvl = level;
-    if (lvl == 10) return '🐣';
-    if (lvl == 20) return '🧭';
-    if (lvl == 30) return '🛡️';
-    if (lvl == 40) return '🧠';
-    if (lvl == 50) return '🧙‍♂️';
-    return '👑';
+    if (lvl == 10) return '';
+    if (lvl == 20) return '';
+    if (lvl == 30) return '';
+    if (lvl == 40) return '';
+    if (lvl == 50) return '';
+    return '';
   }
 
   List<Map<String, dynamic>> get dailyQuests {
@@ -70,7 +69,7 @@ class GamificationService extends ChangeNotifier {
         'xp': 30,
         'icon': Icons.menu_book_rounded,
         'isCompleted': readDone,
-        'actionHint': 'Open any NCERT chapter to auto-complete this mission! 📖',
+        'actionHint': 'Open any NCERT chapter to auto-complete this mission!',
       },
       {
         'id': 'daily_explore',
@@ -79,16 +78,16 @@ class GamificationService extends ChangeNotifier {
         'xp': 40,
         'icon': Icons.calculate_rounded,
         'isCompleted': exploreDone,
-        'actionHint': 'Select any subject filter above to auto-complete! 📐',
+        'actionHint': 'Select any subject filter above to auto-complete!',
       },
       {
         'id': 'daily_fav',
         'title': 'Bookmark a Favorite Book',
-        'desc': 'Tap heart icon ❤️ on any book',
+        'desc': 'Tap heart icon on any book',
         'xp': 20,
         'icon': Icons.bookmark_added_rounded,
         'isCompleted': favDone,
-        'actionHint': 'Tap the heart icon ❤️ on any book card to auto-complete!',
+        'actionHint': 'Tap the heart icon on any book card to auto-complete!',
       },
     ];
   }
@@ -116,28 +115,27 @@ class GamificationService extends ChangeNotifier {
   }
 
   static const List<String> avatars = [
-    '🦉 Smart Owl',
-    '🦊 Clever Fox',
-    '🚀 Space Cadet',
-    '🐼 Wise Panda',
-    '🐰 Hero Bunny',
+    'Smart Owl',
+    'Clever Fox',
+    'Space Cadet',
+    'Wise Panda',
+    'Hero Bunny',
   ];
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool('is_dark_mode') ?? false;
     _isOnboardingCompleted = prefs.getBool('is_onboarding_completed') ?? false;
     _userClass = prefs.getString('user_class') ?? '10';
     _userName = prefs.getString('user_name') ?? 'Student';
     _xp = prefs.getInt('user_xp') ?? 50;
     _streak = prefs.getInt('user_streak') ?? 1;
-    _currentAvatar = prefs.getString('user_avatar') ?? '🦉 Smart Owl';
+    _currentAvatar = prefs.getString('user_avatar') ?? 'Smart Owl';
     _lastReadDate = prefs.getString('last_read_date') ?? '';
     _lastDailyBonusDate = prefs.getString('last_daily_bonus_date') ?? '';
     _lastExploredDate = prefs.getString('last_explored_date') ?? '';
     _lastExploredSubject = prefs.getString('last_explored_subject') ?? '';
     _unlockedBadges =
-        prefs.getStringList('unlocked_badges') ?? ['Book Explorer 🌟'];
+        prefs.getStringList('unlocked_badges') ?? ['Book Explorer'];
     _favoriteBookCodes = prefs.getStringList('favorite_books') ?? [];
 
     final rawBookmarks = prefs.getStringList('saved_pdf_bookmarks') ?? [];
@@ -215,12 +213,6 @@ class GamificationService extends ChangeNotifier {
     }
   }
 
-  void toggleTheme() async {
-    _isDarkMode = !_isDarkMode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_dark_mode', _isDarkMode);
-    notifyListeners();
-  }
 
   void setAvatar(String avatar) async {
     _currentAvatar = avatar;
@@ -236,9 +228,9 @@ class GamificationService extends ChangeNotifier {
       _favoriteBookCodes.add(bookCode);
       addXp(15, 'Favorited a book!');
     }
+    notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('favorite_books', _favoriteBookCodes);
-    notifyListeners();
   }
 
   bool isFavorite(String bookCode) {
@@ -373,18 +365,18 @@ class GamificationService extends ChangeNotifier {
   void _checkBadges() async {
     final newBadges = List<String>.from(_unlockedBadges);
 
-    if (_xp >= 100 && !newBadges.contains('Super Reader 📖')) {
-      newBadges.add('Super Reader 📖');
+    if (_xp >= 100 && !newBadges.contains('Super Reader')) {
+      newBadges.add('Super Reader');
     }
-    if (_xp >= 300 && !newBadges.contains('Master Mind 🧠')) {
-      newBadges.add('Master Mind 🧠');
+    if (_xp >= 300 && !newBadges.contains('Master Mind')) {
+      newBadges.add('Master Mind');
     }
-    if (_streak >= 3 && !newBadges.contains('Streak Champ 🔥')) {
-      newBadges.add('Streak Champ 🔥');
+    if (_streak >= 3 && !newBadges.contains('Streak Champ')) {
+      newBadges.add('Streak Champ');
     }
     if (_favoriteBookCodes.length >= 5 &&
-        !newBadges.contains('Book Collector 📚')) {
-      newBadges.add('Book Collector 📚');
+        !newBadges.contains('Book Collector')) {
+      newBadges.add('Book Collector');
     }
 
     if (newBadges.length != _unlockedBadges.length) {

@@ -39,21 +39,34 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   void _onStateChanged() {
     if (mounted) {
-      _loadFavorites();
+      _loadFavorites(showLoading: false);
     }
   }
 
-  Future<void> _loadFavorites() async {
-    setState(() => _isLoading = true);
-    await _repository.loadCatalog();
+  Future<void> _loadFavorites({bool showLoading = true}) async {
+    if (showLoading && _favoriteBooks.isEmpty) {
+      setState(() => _isLoading = true);
+    }
+    if (!_repository.isLoaded) {
+      await _repository.loadCatalog();
+    }
     final favCodes = widget.gamification.favoriteBookCodes;
     final List<NcertBook> favs = [];
 
-    for (final cls in _repository.getAvailableClasses()) {
-      for (final subj in _repository.getSubjectsForClass(cls)) {
-        for (final b in _repository.getBooks(cls, subj)) {
-          if (favCodes.contains(b.code) && !favs.any((item) => item.code == b.code)) {
-            favs.add(b);
+    for (final code in favCodes) {
+      final b = _repository.findBookByCode(code);
+      if (b != null && !favs.any((item) => item.code == b.code)) {
+        favs.add(b);
+      }
+    }
+
+    if (favs.isEmpty && favCodes.isNotEmpty) {
+      for (final cls in _repository.getAvailableClasses()) {
+        for (final subj in _repository.getSubjectsForClass(cls)) {
+          for (final b in _repository.getBooks(cls, subj)) {
+            if (favCodes.contains(b.code) && !favs.any((item) => item.code == b.code)) {
+              favs.add(b);
+            }
           }
         }
       }
@@ -69,112 +82,125 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = widget.gamification.isDarkMode;
-
     return BlocBuilder<BooksBloc, BooksState>(
       builder: (context, state) {
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = AppResponsive.getGridColumnCount(
-                  context,
-                  availableWidth: constraints.maxWidth,
-                );
+        return MaxContentConstraint(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = AppResponsive.getGridColumnCount(
+                context,
+                availableWidth: constraints.maxWidth,
+              );
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Favorite Books ❤️',
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Saved Favorites',
+                          style: GoogleFonts.roboto(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.6,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Your saved collection of NCERT textbooks',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
+                        const SizedBox(height: 2),
+                        Text(
+                          'Quick access to your starred textbooks',
+                          style: GoogleFonts.roboto(
+                            fontSize: 13,
+                            color: const Color(0xFF777777),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal))
-                      : _favoriteBooks.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.favorite_border_rounded, size: 54, color: AppTheme.accentRose),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'No Favorites Added Yet',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Tap the heart icon on any book to add it here',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 12,
-                                      color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : GridView.builder(
-                              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 90),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: columns,
-                                crossAxisSpacing: 14,
-                                mainAxisSpacing: 14,
-                                childAspectRatio: 0.70,
-                              ),
-                              itemCount: _favoriteBooks.length,
-                              itemBuilder: (context, idx) {
-                                final book = _favoriteBooks[idx];
-                                return BookCard(
-                                  book: book,
-                                  gamification: widget.gamification,
-                                  onTap: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => BookDetailScreen(
-                                          book: book,
-                                          gamification: widget.gamification,
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
+                        : _favoriteBooks.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF181818),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: const Color(0xFF282828),
+                                          width: 1.0,
                                         ),
                                       ),
-                                    );
-                                    _loadFavorites();
-                                  },
-                                );
-                              },
-                            ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+                                      child: const Icon(
+                                        Icons.favorite_border_rounded,
+                                        size: 28,
+                                        color: AppTheme.accentRose,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      'No favorites added yet',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Tap the heart icon on any book to add it here',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 12.5,
+                                        color: const Color(0xFF777777),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : GridView.builder(
+                                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 95),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  crossAxisSpacing: 14,
+                                  mainAxisSpacing: 14,
+                                  childAspectRatio: 0.88,
+                                ),
+                                itemCount: _favoriteBooks.length,
+                                itemBuilder: (context, idx) {
+                                  final book = _favoriteBooks[idx];
+                                  return BookCard(
+                                    book: book,
+                                    gamification: widget.gamification,
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => BookDetailScreen(
+                                            book: book,
+                                            gamification: widget.gamification,
+                                          ),
+                                        ),
+                                      );
+                                      _loadFavorites();
+                                    },
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
-  },
-);
   }
 }
