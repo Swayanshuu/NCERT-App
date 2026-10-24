@@ -18,7 +18,10 @@ import 'package:ncert_books_app/screens/explore/explore_screen.dart';
 import 'package:ncert_books_app/screens/books/downloads_screen.dart';
 import 'package:ncert_books_app/screens/progress/progress_screen.dart';
 import 'package:ncert_books_app/screens/profile/profile_screen.dart';
-import 'package:shimmer_text/shimmer_text.dart';
+import 'package:ncert_books_app/screens/notices/notices_screen.dart';
+import 'package:ncert_books_app/screens/home/widgets/notices_quick_card.dart';
+import 'package:ncert_books_app/widgets/app_drawer.dart';
+import 'package:ncert_books_app/services/ncert_notices_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -32,6 +35,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final NcertRepository _repository = NcertRepository();
   final ScrollController _homeScrollController = ScrollController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<DownloadsScreenState> _downloadsKey =
       GlobalKey<DownloadsScreenState>();
   late ConfettiController _confettiController;
@@ -47,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     _selectedClass = widget.gamification.userClass;
     widget.gamification.addListener(_onStateChange);
+    NcertNoticesService.instance.init();
     _initCatalog();
   }
 
@@ -115,21 +120,22 @@ class _HomeScreenState extends State<HomeScreen> {
         controller: _homeScrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // 1. Top Header with brand 'alcademy.', ONLINE indicator, and hamburger menu
+          // Top header
           SliverToBoxAdapter(
             child: HomeHeader(
               isDark: isDark,
-              onProfileTap: () => setState(() => _currentTabIndex = 4),
+              onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
+              onProfileTap: () => _scaffoldKey.currentState?.openDrawer(),
             ),
           ),
 
-          // 2. Greeting: 'Good evening, swayanshu.'
+          // User greeting
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(
                 left: 20,
                 right: 20,
-                top: 8,
+                top: 4,
                 bottom: 12,
               ),
               child: Row(
@@ -137,26 +143,46 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     'Good ${_getTimeGreeting()}, ',
                     style: GoogleFonts.outfit(
-                      fontSize: 23,
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.4,
-                      color: isDark ? Colors.white : const Color(0xFF111827),
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
                   ),
-                  ShimmerText(
-                    text: '${widget.gamification.userName}.',
-                    textSize: 23,
-                    textColor: isDark ? Colors.white : const Color(0xFF111827),
-                    shiningColor: const Color.fromARGB(255, 102, 102, 102),
-                    letterspacing: -0.4,
-                    textFamily: GoogleFonts.outfit().fontFamily ?? '',
+                  Text(
+                    '${widget.gamification.userName}',
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      // fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          // 3. Hero Card: 'THE STUDENT JOURNAL' (Teal gradient, 24 OCT, Evening chill mode!, notebook graphic, resources count, Class pill)
+          // Stories reel
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 20),
+              child: BeyondCampusStories(isDark: isDark),
+            ),
+          ),
+
+          // Notices preview card
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 22),
+              child: NoticesQuickCard(
+                isDark: isDark,
+                gamification: widget.gamification,
+              ),
+            ),
+          ),
+
+          // Journal hero card
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, bottom: 24),
@@ -169,15 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 4. Section 1: 'STORIES & UPDATES: Beyond textbook' (Mind maps, Developer note, CBSE updates, Formulas)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: BeyondCampusStories(isDark: isDark),
-            ),
-          ),
-
-          // 6. Section 3: 'THE STUDY SHELF: Your subjects' (Bento Grid of subjects with watermarks, icons, diagonal arrows, and 'Change class' button)
+          // Subjects bento grid
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -205,7 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 7. Bottom spacer to comfortably clear floating glass navigation bar
+          // Bottom nav inset
           const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
@@ -218,8 +236,14 @@ class _HomeScreenState extends State<HomeScreen> {
       controller: _confettiController,
       child: AppBackground(
         child: Scaffold(
+          key: _scaffoldKey,
           backgroundColor: Colors.transparent,
           extendBody: true,
+          endDrawer: AppDrawer(
+            gamification: widget.gamification,
+            onOpenDownloads: () => setState(() => _currentTabIndex = 2),
+            onOpenProgress: () => setState(() => _currentTabIndex = 3),
+          ),
           body: SafeArea(
             top: true,
             bottom: false,

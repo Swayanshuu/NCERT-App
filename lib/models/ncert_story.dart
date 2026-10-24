@@ -5,8 +5,10 @@ class NcertStory {
   final String source;
   final String link;
   final String publishedAt;
+  final int timestamp;
   final String category;
   final List<int> gradientColors;
+  final String? imageUrl;
   final bool isRead;
 
   const NcertStory({
@@ -16,8 +18,10 @@ class NcertStory {
     required this.source,
     required this.link,
     required this.publishedAt,
+    this.timestamp = 0,
     required this.category,
     required this.gradientColors,
+    this.imageUrl,
     this.isRead = false,
   });
 
@@ -28,8 +32,10 @@ class NcertStory {
         'source': source,
         'link': link,
         'publishedAt': publishedAt,
+        'timestamp': timestamp,
         'category': category,
         'gradientColors': gradientColors,
+        'imageUrl': imageUrl,
         'isRead': isRead,
       };
 
@@ -40,11 +46,13 @@ class NcertStory {
         source: json['source'] as String? ?? 'NCERT News',
         link: json['link'] as String? ?? '',
         publishedAt: json['publishedAt'] as String? ?? 'Today',
+        timestamp: json['timestamp'] as int? ?? 0,
         category: json['category'] as String? ?? 'Education',
         gradientColors: (json['gradientColors'] as List<dynamic>?)
                 ?.map((e) => (e as num).toInt())
                 .toList() ??
-            const [0xFF1E1B4B, 0xFF0F172A],
+            const [0xFF1E293B, 0xFF1E293B],
+        imageUrl: json['imageUrl'] as String?,
         isRead: json['isRead'] as bool? ?? false,
       );
 
@@ -55,8 +63,10 @@ class NcertStory {
     String? source,
     String? link,
     String? publishedAt,
+    int? timestamp,
     String? category,
     List<int>? gradientColors,
+    String? imageUrl,
     bool? isRead,
   }) {
     return NcertStory(
@@ -66,8 +76,10 @@ class NcertStory {
       source: source ?? this.source,
       link: link ?? this.link,
       publishedAt: publishedAt ?? this.publishedAt,
+      timestamp: timestamp ?? this.timestamp,
       category: category ?? this.category,
       gradientColors: gradientColors ?? this.gradientColors,
+      imageUrl: imageUrl ?? this.imageUrl,
       isRead: isRead ?? this.isRead,
     );
   }

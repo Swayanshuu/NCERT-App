@@ -10,10 +10,10 @@ class GamificationService extends ChangeNotifier {
 
   bool _isOnboardingCompleted = false;
   String _userClass = '10';
-  String _userName = 'Student';
+  String _userName = 'Maria';
   int _xp = 50;
   int _streak = 1;
-  String _currentAvatar = 'Smart Owl';
+  String _currentAvatar = 'Maria';
   String _lastReadDate = '';
   String _lastDailyBonusDate = '';
   String _lastExploredDate = '';
@@ -115,6 +115,7 @@ class GamificationService extends ChangeNotifier {
   }
 
   static const List<String> avatars = [
+    'Maria',
     'Smart Owl',
     'Clever Fox',
     'Space Cadet',
@@ -126,10 +127,12 @@ class GamificationService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _isOnboardingCompleted = prefs.getBool('is_onboarding_completed') ?? false;
     _userClass = prefs.getString('user_class') ?? '10';
-    _userName = prefs.getString('user_name') ?? 'Student';
+    final savedName = prefs.getString('user_name');
+    _userName = (savedName == null || savedName == 'Student') ? 'Maria' : savedName;
     _xp = prefs.getInt('user_xp') ?? 50;
     _streak = prefs.getInt('user_streak') ?? 1;
-    _currentAvatar = prefs.getString('user_avatar') ?? 'Smart Owl';
+    final savedAvatar = prefs.getString('user_avatar');
+    _currentAvatar = (savedAvatar == null || savedAvatar == 'Smart Owl') ? 'Maria' : savedAvatar;
     _lastReadDate = prefs.getString('last_read_date') ?? '';
     _lastDailyBonusDate = prefs.getString('last_daily_bonus_date') ?? '';
     _lastExploredDate = prefs.getString('last_explored_date') ?? '';

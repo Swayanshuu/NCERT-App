@@ -6,6 +6,7 @@ import 'package:ncert_books_app/screens/profile/bloc/profile_bloc.dart';
 
 class AvatarHelper {
   static IconData getIcon(String avatar) {
+    if (avatar.toLowerCase().contains('maria')) return Icons.face_rounded;
     if (avatar.contains('Owl')) return Icons.school_rounded;
     if (avatar.contains('Fox')) return Icons.psychology_rounded;
     if (avatar.contains('Space')) return Icons.rocket_launch_rounded;
@@ -15,6 +16,7 @@ class AvatarHelper {
   }
 
   static Color getColor(String avatar) {
+    if (avatar.toLowerCase().contains('maria')) return const Color(0xFFF59E0B);
     if (avatar.contains('Owl')) return const Color(0xFF38BDF8);
     if (avatar.contains('Fox')) return const Color(0xFFF97316);
     if (avatar.contains('Space')) return const Color(0xFFA855F7);
@@ -127,9 +129,18 @@ class AvatarSelectorModal extends StatelessWidget {
                             color: iconColor.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: Center(
-                            child: Icon(icon, color: iconColor, size: 22),
-                          ),
+                          child: av.toLowerCase().contains('maria')
+                              ? ClipOval(
+                                  child: Image.asset(
+                                    'assets/avatar_maria.jpg',
+                                    width: 40,
+                                    height: 40,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Center(
+                                  child: Icon(icon, color: iconColor, size: 22),
+                                ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(

@@ -8,6 +8,7 @@ import 'package:ncert_books_app/services/ncert_repository.dart';
 import 'package:ncert_books_app/services/pdf_cache_service.dart';
 import 'package:ncert_books_app/services/ad_service.dart';
 import 'package:ncert_books_app/services/notification_service.dart';
+import 'package:ncert_books_app/services/ncert_news_service.dart';
 import 'package:ncert_books_app/screens/home/home_screen.dart';
 import 'package:ncert_books_app/screens/onboarding/onboarding_screen.dart';
 import 'package:ncert_books_app/screens/home/bloc/home_bloc.dart';
@@ -74,6 +75,12 @@ Future<void> _initServicesAsync(GamificationService gamification) async {
     );
   } catch (e) {
     debugPrint('NotificationService init error: $e');
+  }
+
+  try {
+    await NcertNewsService.instance.init();
+  } catch (e) {
+    debugPrint('NcertNewsService init error: $e');
   }
 }
 

@@ -11,6 +11,7 @@ import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/widgets/app_background.dart';
 import 'package:ncert_books_app/widgets/glass/glass_search_bar.dart';
 import 'package:ncert_books_app/widgets/painters/bento_watermark_painter.dart';
+import 'package:ncert_books_app/widgets/app_shimmer.dart';
 
 class SubjectBooksScreen extends StatefulWidget {
   final String className;
@@ -360,14 +361,7 @@ class _SubjectBooksScreenState extends State<SubjectBooksScreen> {
                     // 3. Books Grid or Empty State
                     if (_isLoading)
                       const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.all(50),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF3B82F6),
-                            ),
-                          ),
-                        ),
+                        child: AppShimmerBookGrid(),
                       )
                     else if (_filteredBooks.isEmpty)
                       SliverToBoxAdapter(

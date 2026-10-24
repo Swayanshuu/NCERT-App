@@ -9,6 +9,7 @@ import 'package:ncert_books_app/theme/app_responsive.dart';
 import 'package:ncert_books_app/widgets/glass/glass_search_bar.dart';
 import 'package:ncert_books_app/screens/books/widgets/book_card.dart';
 import 'package:ncert_books_app/screens/books/book_detail_screen.dart';
+import 'package:ncert_books_app/widgets/app_shimmer.dart';
 
 class ExploreScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -587,14 +588,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   // 5. Books Grid or Empty State
                   if (_isLoading)
                     const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(50),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF3B82F6),
-                          ),
-                        ),
-                      ),
+                      child: AppShimmerBookGrid(),
                     )
                   else if (_searchResults.isEmpty)
                     SliverToBoxAdapter(

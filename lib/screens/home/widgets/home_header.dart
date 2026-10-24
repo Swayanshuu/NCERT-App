@@ -3,14 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 
 class HomeHeader extends StatelessWidget {
   final bool isDark;
-  final VoidCallback onProfileTap;
+  final VoidCallback? onProfileTap;
   final VoidCallback? onMenuTap;
+  final VoidCallback? onNoticesTap;
+  final bool hasUnreadNotices;
 
   const HomeHeader({
     super.key,
     required this.isDark,
-    required this.onProfileTap,
+    this.onProfileTap,
     this.onMenuTap,
+    this.onNoticesTap,
+    this.hasUnreadNotices = false,
   });
 
   @override
@@ -21,7 +25,7 @@ class HomeHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Brand Name
+          // NCERT brand title
           Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,13 +60,13 @@ class HomeHeader extends StatelessWidget {
             ],
           ),
 
-          // Right Controls:Hamburger Menu Icon
+          // Menu button (opens drawer from left)
           GestureDetector(
             onTap: onMenuTap ?? onProfileTap,
             behavior: HitTestBehavior.opaque,
             child: SizedBox(
-              width: 34,
-              height: 34,
+              width: 36,
+              height: 36,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
