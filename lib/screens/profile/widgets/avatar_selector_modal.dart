@@ -6,23 +6,33 @@ import 'package:ncert_books_app/screens/profile/bloc/profile_bloc.dart';
 
 class AvatarHelper {
   static IconData getIcon(String avatar) {
-    if (avatar.toLowerCase().contains('maria')) return Icons.face_rounded;
     if (avatar.contains('Owl')) return Icons.school_rounded;
     if (avatar.contains('Fox')) return Icons.psychology_rounded;
-    if (avatar.contains('Space')) return Icons.rocket_launch_rounded;
     if (avatar.contains('Panda')) return Icons.eco_rounded;
     if (avatar.contains('Bunny')) return Icons.bolt_rounded;
-    return Icons.person_rounded;
+    if (avatar.contains('Lion')) return Icons.pets_rounded;
+    if (avatar.contains('Tiger')) return Icons.local_fire_department_rounded;
+    return Icons.pets_rounded;
   }
 
   static Color getColor(String avatar) {
-    if (avatar.toLowerCase().contains('maria')) return const Color(0xFFF59E0B);
     if (avatar.contains('Owl')) return const Color(0xFF38BDF8);
     if (avatar.contains('Fox')) return const Color(0xFFF97316);
-    if (avatar.contains('Space')) return const Color(0xFFA855F7);
     if (avatar.contains('Panda')) return const Color(0xFF10B981);
     if (avatar.contains('Bunny')) return const Color(0xFFF59E0B);
-    return const Color(0xFF3B82F6);
+    if (avatar.contains('Lion')) return const Color(0xFFEAB308);
+    if (avatar.contains('Tiger')) return const Color(0xFFEF4444);
+    return const Color(0xFF38BDF8);
+  }
+
+  static String getEmoji(String avatar) {
+    if (avatar.contains('Owl')) return '🦉';
+    if (avatar.contains('Fox')) return '🦊';
+    if (avatar.contains('Panda')) return '🐼';
+    if (avatar.contains('Bunny')) return '🐰';
+    if (avatar.contains('Lion')) return '🦁';
+    if (avatar.contains('Tiger')) return '🐯';
+    return '🐾';
   }
 }
 
@@ -129,18 +139,9 @@ class AvatarSelectorModal extends StatelessWidget {
                             color: iconColor.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: av.toLowerCase().contains('maria')
-                              ? ClipOval(
-                                  child: Image.asset(
-                                    'assets/avatar_maria.jpg',
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Center(
-                                  child: Icon(icon, color: iconColor, size: 22),
-                                ),
+                          child: Center(
+                            child: Icon(icon, color: iconColor, size: 22),
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(

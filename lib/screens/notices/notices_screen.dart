@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/ncert_notice.dart';
 import '../../services/gamification_service.dart';
 import '../../services/ncert_notices_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/ad_banner_widget.dart';
 
 class NoticesScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -19,7 +22,11 @@ class _NoticesScreenState extends State<NoticesScreen> {
   String _selectedCategory = 'All';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   bool _isSearchOpen = false;
+
+  int _currentPage = 0;
+  static const int _pageSize = 12;
 
   final List<String> _categories = [
     'All',
@@ -38,6 +45,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -56,12 +64,15 @@ class _NoticesScreenState extends State<NoticesScreen> {
         await launchUrl(uri, mode: LaunchMode.platformDefault);
       }
     } catch (e) {
-      debugPrint('Could not open notice PDF: $e');
+      debugPrint('Could not open notice: $e');
     }
   }
 
   List<NcertNotice> _filterNotices(List<NcertNotice> all) {
     return all.where((n) {
+      if (NcertNoticesService.isGenericOrInvalidTitle(n.title, n.pdfUrl)) {
+        return false;
+      }
       final matchesCat =
           _selectedCategory == 'All' || n.category == _selectedCategory;
       final matchesQuery = _searchQuery.isEmpty ||
@@ -71,19 +82,45 @@ class _NoticesScreenState extends State<NoticesScreen> {
     }).toList();
   }
 
+  void _goToPage(int page) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _currentPage = page;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  int _getAdPositionForPage(int page, int itemCount) {
+    if (itemCount < 8) return -1;
+    final rand = Random(page * 37 + _selectedCategory.hashCode);
+    final maxPos = min(10, itemCount);
+    const minPos = 8;
+    if (maxPos < minPos) return minPos;
+    return minPos + rand.nextInt(maxPos - minPos + 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = widget.gamification.isDarkMode;
     final noticesService = NcertNoticesService.instance;
 
-    final bgColor = isDark ? const Color(0xFF0F1116) : const Color(0xFFF8FAFC);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
-    final textMuted = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final circularBtnBg = isDark ? const Color(0xFF1E222A) : const Color(0xFFE2E8F0);
+    final bgColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textMuted = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+    final cardBg = isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightSurfaceElevated;
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
+        bottom: false,
         child: AnimatedBuilder(
           animation: noticesService,
           builder: (context, _) {
@@ -91,578 +128,844 @@ class _NoticesScreenState extends State<NoticesScreen> {
             final filtered = _filterNotices(allNotices);
             final isLoading = noticesService.isLoading && allNotices.isEmpty;
 
+            final totalPages = (filtered.length / _pageSize).ceil().clamp(1, 999);
+            final safePage = _currentPage.clamp(0, totalPages - 1);
+            final startIndex = safePage * _pageSize;
+            final pageItems = filtered.skip(startIndex).take(_pageSize).toList();
+
             return RefreshIndicator(
-              color: const Color(0xFF0284C7),
-              backgroundColor: isDark ? const Color(0xFF1E222A) : Colors.white,
-              onRefresh: () => noticesService.fetchLiveNotices(force: true),
+              color: const Color(0xFF38BDF8),
+              backgroundColor:
+                  isDark ? AppTheme.darkSurfaceElevated : Colors.white,
+              onRefresh: () =>
+                  noticesService.fetchLiveNotices(force: true),
               child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  // 1. Top Bar: Circular Back Button, Title, Circular Action Buttons
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 14,
-                        bottom: 16,
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
                       ),
-                      child: Row(
-                        children: [
-                          // Circular Back Button
-                          InkWell(
-                            onTap: () => Navigator.of(context).pop(),
-                            borderRadius: BorderRadius.circular(22),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: circularBtnBg,
-                              ),
-                              child: Icon(
-                                Icons.arrow_back_rounded,
-                                color: textPrimary,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-
-                          // Circular Search Toggle Button
-                          InkWell(
-                            onTap: () {
-                              setState(() {
-                                _isSearchOpen = !_isSearchOpen;
-                                if (!_isSearchOpen) {
-                                  _searchQuery = '';
-                                  _searchController.clear();
-                                }
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(22),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: circularBtnBg,
-                              ),
-                              child: Icon(
-                                _isSearchOpen
-                                    ? Icons.close_rounded
-                                    : Icons.search_rounded,
-                                color: textPrimary,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-
-                          // Circular Refresh Button
-                          InkWell(
-                            onTap: () =>
-                                noticesService.fetchLiveNotices(force: true),
-                            borderRadius: BorderRadius.circular(22),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: circularBtnBg,
-                              ),
-                              child: noticesService.isLoading
-                                  ? Center(
-                                      child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: textPrimary,
+                      slivers: [
+                        // App bar
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (canPop) ...[
+                                      GestureDetector(
+                                        onTap: () => Navigator.of(context).pop(),
+                                        child: Container(
+                                          width: 38,
+                                          height: 38,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: cardBg,
+                                            border: Border.all(color: borderCol),
+                                          ),
+                                          child: Icon(
+                                            Icons.arrow_back_rounded,
+                                            size: 19,
+                                            color: textPrimary,
+                                          ),
                                         ),
                                       ),
-                                    )
-                                  : Icon(
-                                      Icons.refresh_rounded,
-                                      color: textPrimary,
-                                      size: 20,
+                                      const SizedBox(width: 12),
+                                    ],
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'Official Notices',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: -0.4,
+                                                color: textPrimary,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 7,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF0284C7)
+                                                    .withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                'NCERT',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: const Color(0xFF38BDF8),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          'ncert.nic.in live circulars & updates',
+                                          style: GoogleFonts.roboto(
+                                            fontSize: 11.5,
+                                            color: textMuted,
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                  ],
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _isSearchOpen = !_isSearchOpen;
+                                      if (!_isSearchOpen) {
+                                        _searchQuery = '';
+                                        _searchController.clear();
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: cardBg,
+                                      border: Border.all(color: borderCol),
+                                    ),
+                                    child: Icon(
+                                      _isSearchOpen
+                                          ? Icons.close_rounded
+                                          : Icons.search_rounded,
+                                      size: 18,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        ),
 
-                  // 2. Screen Headline & Subtitle (Clean & Bold Modern Sans)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'NCERT Notices',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 27,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.6,
-                                  color: textPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3.5,
-                                ),
+                        // Search input
+                        if (_isSearchOpen)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+                              child: Container(
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0284C7).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: cardBg,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: borderCol),
                                 ),
-                                child: Text(
-                                  'LIVE',
+                                child: TextField(
+                                  controller: _searchController,
+                                  autofocus: true,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _searchQuery = val.trim();
+                                      _currentPage = 0;
+                                    });
+                                  },
                                   style: GoogleFonts.roboto(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.8,
-                                    color: const Color(0xFF0284C7),
+                                    fontSize: 14,
+                                    color: textPrimary,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search circulars by keyword...',
+                                    hintStyle: GoogleFonts.roboto(
+                                      fontSize: 13.5,
+                                      color: textMuted,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.search_rounded,
+                                      color: textMuted,
+                                      size: 19,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Official circulars, press releases & curriculum guidelines from ncert.nic.in',
-                            style: GoogleFonts.roboto(
-                              fontSize: 13,
-                              color: textMuted,
-                              height: 1.35,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
 
-                  // 3. Search Bar (if toggled open)
-                  if (_isSearchOpen)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF1E222A)
-                                : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF2B313E)
-                                  : const Color(0xFFE2E8F0),
-                            ),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            autofocus: true,
-                            onChanged: (val) =>
-                                setState(() => _searchQuery = val.trim()),
-                            style: GoogleFonts.roboto(
-                              fontSize: 14.5,
-                              color: textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Search notices by keyword or subject...',
-                              hintStyle: GoogleFonts.roboto(
-                                fontSize: 14,
-                                color: textMuted,
-                              ),
-                              prefixIcon: Icon(
-                                Icons.search_rounded,
-                                color: textMuted,
-                                size: 20,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 10)),
+
+                        // Category filter chips
+                        SliverToBoxAdapter(
+                          child: SizedBox(
+                            height: 36,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: _categories.length,
+                              separatorBuilder: (_, _) => const SizedBox(width: 8),
+                              itemBuilder: (context, index) {
+                                final cat = _categories[index];
+                                final isSelected = _selectedCategory == cat;
+
+                                return InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedCategory = cat;
+                                      _currentPage = 0;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 7,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                          : cardBg,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: isSelected ? Colors.transparent : borderCol,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        cat,
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 12,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? (isDark
+                                                  ? const Color(0xFF0F172A)
+                                                  : Colors.white)
+                                              : textMuted,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ),
-                      ),
-                    ),
 
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                        const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-                  // 4. Capsule Filter Chips
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 38,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: _categories.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final cat = _categories[index];
-                          final isSelected = _selectedCategory == cat;
-
-                          return InkWell(
-                            onTap: () => setState(() => _selectedCategory = cat),
-                            borderRadius: BorderRadius.circular(24),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                                    : (isDark
-                                        ? const Color(0xFF1E222A)
-                                        : const Color(0xFFE2E8F0)),
-                                borderRadius: BorderRadius.circular(24),
-                              ),
+                        // Notice list content
+                        if (isLoading)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.all(50),
                               child: Center(
-                                child: Text(
-                                  cat,
-                                  style: GoogleFonts.roboto(
-                                    fontSize: 12,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? (isDark ? const Color(0xFF0F172A) : Colors.white)
-                                        : textMuted,
-                                  ),
+                                child: Column(
+                                  children: [
+                                    const CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Color(0xFF38BDF8),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      'Loading NCERT official notices...',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 13,
+                                        color: textMuted,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-                  // 5. Notices List
-                  if (isLoading)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 40,
-                        ),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              const CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Color(0xFF0284C7),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                'Loading latest NCERT notices...',
-                                style: GoogleFonts.roboto(
-                                  fontSize: 13,
-                                  color: textMuted,
+                          )
+                        else if (filtered.isEmpty)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.all(50),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.find_in_page_rounded,
+                                      size: 44,
+                                      color: textMuted.withValues(alpha: 0.5),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No notices found',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Try clearing your search query',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 12.5,
+                                        color: textMuted,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final notice = pageItems[index];
+                                  final isFeaturedLatest = safePage == 0 &&
+                                      index == 0 &&
+                                      _searchQuery.isEmpty;
+
+                                  final noticeWidget = isFeaturedLatest
+                                      ? Column(
+                                          children: [
+                                            _buildFeaturedLatestNotice(
+                                              context: context,
+                                              notice: notice,
+                                              isDark: isDark,
+                                              textPrimary: textPrimary,
+                                              textMuted: textMuted,
+                                            ),
+                                            const SizedBox(height: 8),
+                                          ],
+                                        )
+                                      : _buildFlatNoticeTile(
+                                          context: context,
+                                          notice: notice,
+                                          isDark: isDark,
+                                          borderCol: borderCol,
+                                          textPrimary: textPrimary,
+                                          textMuted: textMuted,
+                                        );
+
+                                  final adPosition = _getAdPositionForPage(
+                                    safePage,
+                                    pageItems.length,
+                                  );
+
+                                  if ((index + 1) == adPosition) {
+                                    return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        noticeWidget,
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 8,
+                                            bottom: 8,
+                                          ),
+                                          child: AdBannerWidget(
+                                            key: ValueKey(
+                                              'notice_ad_${safePage}_$index',
+                                            ),
+                                            showSectionLabel: false,
+                                            margin: EdgeInsets.zero,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+
+                                  return noticeWidget;
+                                },
+                                childCount: pageItems.length,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    )
-                  else if (filtered.isEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 40,
-                        ),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.find_in_page_rounded,
-                                size: 48,
-                                color: textMuted.withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No notices found',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Try clearing your search query or selecting "All"',
-                                style: GoogleFonts.roboto(
-                                  fontSize: 12.5,
-                                  color: textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final notice = filtered[index];
-                            final isFirst = index == 0 && _searchQuery.isEmpty;
 
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: _buildNoticeCard(
-                                context: context,
-                                notice: notice,
+                        // 2. Inline pagination at the end of the notice list
+                        if (filtered.isNotEmpty && totalPages > 1)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                              child: _buildEndPaginationCard(
+                                currentPage: safePage,
+                                totalPages: totalPages,
+                                totalItems: filtered.length,
                                 isDark: isDark,
-                                isFeatured: isFirst,
+                                borderCol: borderCol,
+                                textPrimary: textPrimary,
+                                textMuted: textMuted,
                               ),
-                            );
-                          },
-                          childCount: filtered.length,
+                            ),
+                          ),
+
+                        // Bottom navigation bar scroll clearance
+                        SliverToBoxAdapter(
+                          child: SizedBox(height: canPop ? 32 : 120),
                         ),
-                      ),
+                      ],
                     ),
-                ],
-              ),
-            );
+                  );
           },
         ),
       ),
     );
   }
 
-  Widget _buildNoticeCard({
+  // 1. Featured latest notice with distinct highlighted background
+  Widget _buildFeaturedLatestNotice({
     required BuildContext context,
     required NcertNotice notice,
     required bool isDark,
-    required bool isFeatured,
+    required Color textPrimary,
+    required Color textMuted,
   }) {
-    // Top featured card uses high-contrast light styling (McDonald's card style from reference)
-    final cardBg = isFeatured
-        ? const Color(0xFFF1F5F9) // High-contrast clean off-white card
-        : (isDark ? const Color(0xFF1A1D24) : Colors.white);
-
-    final cardBorder = isFeatured
-        ? Border.all(color: const Color(0xFFE2E8F0), width: 1.2)
-        : Border.all(
-            color: isDark ? const Color(0xFF282C37) : const Color(0xFFE2E8F0),
-            width: 1,
-          );
-
-    final titleColor = isFeatured
-        ? const Color(0xFF0F172A)
-        : (isDark ? Colors.white : const Color(0xFF0F172A));
-
-    final iconBg = isFeatured
-        ? const Color(0xFF0284C7).withValues(alpha: 0.15)
-        : (isDark
-            ? const Color(0xFF0284C7).withValues(alpha: 0.18)
-            : const Color(0xFF0284C7).withValues(alpha: 0.12));
+    final isPdf = notice.pdfUrl.toLowerCase().endsWith('.pdf');
+    final featuredBg = isDark
+        ? const Color(0xFF13222E)
+        : const Color(0xFFE0F2FE);
+    final featuredBorder = isDark
+        ? const Color(0xFF0284C7).withValues(alpha: 0.35)
+        : const Color(0xFFBAE6FD);
 
     return InkWell(
       onTap: () => _openNoticePdf(notice.pdfUrl),
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(22),
-          border: cardBorder,
+          color: featuredBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: featuredBorder, width: 1.2),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Row: Category Icon/Tag & Right Metadata Pill
+            // Top tag
             Row(
               children: [
-                // Category Icon
                 Container(
-                  width: 32,
-                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: iconBg,
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.description_rounded,
-                      color: Color(0xFF0284C7),
-                      size: 16,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 9),
-
-                // Category Tag
-                Text(
-                  notice.category.toUpperCase(),
-                  style: GoogleFonts.roboto(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
                     color: const Color(0xFF0284C7),
-                  ),
-                ),
-
-                const Spacer(),
-
-                // Right Metadata Pill (NEW or Date)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3.5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isFeatured
-                        ? const Color(0xFFE2E8F0)
-                        : (isDark
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : const Color(0xFFF1F5F9)),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: notice.isNew
-                              ? const Color(0xFFF59E0B)
-                              : const Color(0xFF10B981),
-                        ),
+                      const Icon(
+                        Icons.fiber_new_rounded,
+                        size: 14,
+                        color: Colors.white,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 3),
                       Text(
-                        notice.date,
-                        style: GoogleFonts.roboto(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: isFeatured
-                              ? const Color(0xFF334155)
-                              : (isDark
-                                  ? const Color(0xFFCBD5E1)
-                                  : const Color(0xFF475569)),
+                        'LATEST CIRCULAR',
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  notice.date,
+                  style: GoogleFonts.roboto(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? const Color(0xFFBAE6FD) : const Color(0xFF0369A1),
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.open_in_new_rounded,
+                  size: 15,
+                  color: Color(0xFF38BDF8),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
 
-            const SizedBox(height: 12),
-
-            // Headline
+            // Title
             Text(
               notice.title,
+              style: GoogleFonts.outfit(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+                height: 1.35,
+              ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.outfit(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                height: 1.3,
-                color: titleColor,
-              ),
             ),
+            const SizedBox(height: 12),
 
-            const SizedBox(height: 14),
-
-            // Bottom Sub-Pills Row (Inspired by reference UI 'In-store & Online', '✓ Activated')
+            // Bottom format indicator
             Row(
               children: [
-                // Pill 1: Document Format
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: isFeatured
-                        ? const Color(0xFFE2EBF0)
-                        : (isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : const Color(0xFFF1F5F9)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.picture_as_pdf_rounded,
-                        size: 13,
-                        color: isFeatured
-                            ? const Color(0xFF475569)
-                            : (isDark
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFF64748B)),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Official Document',
-                        style: GoogleFonts.roboto(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: isFeatured
-                              ? const Color(0xFF334155)
-                              : (isDark
-                                  ? const Color(0xFFCBD5E1)
-                                  : const Color(0xFF475569)),
-                        ),
-                      ),
-                    ],
+                Icon(
+                  isPdf
+                      ? Icons.picture_as_pdf_rounded
+                      : Icons.language_rounded,
+                  size: 14,
+                  color: isPdf ? const Color(0xFFEF4444) : const Color(0xFF38BDF8),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isPdf ? 'PDF Official Circular' : 'Official Portal Link',
+                  style: GoogleFonts.roboto(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFFBAE6FD) : const Color(0xFF0369A1),
                   ),
                 ),
-
-                const SizedBox(width: 8),
-
-                // Pill 2: Direct Action Pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0284C7).withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'View Notice',
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0284C7),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.open_in_new_rounded,
-                        size: 12,
-                        color: Color(0xFF0284C7),
-                      ),
-                    ],
+                const Spacer(),
+                Text(
+                  'Tap to view document →',
+                  style: GoogleFonts.roboto(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF38BDF8),
                   ),
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // 2. Clean, flat, non-boxy notice list row
+  Widget _buildFlatNoticeTile({
+    required BuildContext context,
+    required NcertNotice notice,
+    required bool isDark,
+    required Color borderCol,
+    required Color textPrimary,
+    required Color textMuted,
+  }) {
+    final isPdf = notice.pdfUrl.toLowerCase().endsWith('.pdf');
+
+    return InkWell(
+      onTap: () => _openNoticePdf(notice.pdfUrl),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: borderCol.withValues(alpha: 0.6),
+              width: 0.8,
+            ),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left icon in soft circle
+            Container(
+              width: 36,
+              height: 36,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkSurface : const Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(
+                  isPdf
+                      ? Icons.picture_as_pdf_rounded
+                      : Icons.language_rounded,
+                  size: 18,
+                  color: isPdf
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF38BDF8),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        notice.category,
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF38BDF8),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: textMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        notice.date,
+                        style: GoogleFonts.roboto(
+                          fontSize: 11,
+                          color: textMuted,
+                        ),
+                      ),
+                      if (notice.isNew) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'NEW',
+                            style: GoogleFonts.outfit(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFFF59E0B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    notice.title,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
+                      height: 1.35,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isPdf ? 'PDF Document • Tap to read' : 'Web Portal • Tap to open',
+                    style: GoogleFonts.roboto(
+                      fontSize: 11,
+                      color: textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Trailing arrow
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 12,
+                color: textMuted.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Clean inline pagination card at the end of notices list
+  Widget _buildEndPaginationCard({
+    required int currentPage,
+    required int totalPages,
+    required int totalItems,
+    required bool isDark,
+    required Color borderCol,
+    required Color textPrimary,
+    required Color textMuted,
+  }) {
+    final hasPrev = currentPage > 0;
+    final hasNext = currentPage < totalPages - 1;
+    final cardBg = isDark ? AppTheme.darkSurfaceElevated : Colors.white;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderCol, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Previous Page
+              InkWell(
+                onTap: hasPrev ? () => _goToPage(currentPage - 1) : null,
+                borderRadius: BorderRadius.circular(14),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: hasPrev
+                        ? (isDark ? const Color(0xFF282832) : const Color(0xFFF1F5F9))
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: hasPrev ? borderCol : borderCol.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.arrow_back_rounded,
+                        size: 16,
+                        color: hasPrev ? textPrimary : textMuted.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Prev',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: hasPrev ? textPrimary : textMuted.withValues(alpha: 0.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Page indicator info
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Page ${currentPage + 1} of $totalPages',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$totalItems official circulars',
+                    style: GoogleFonts.roboto(
+                      fontSize: 11,
+                      color: textMuted,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Next Page
+              InkWell(
+                onTap: hasNext ? () => _goToPage(currentPage + 1) : null,
+                borderRadius: BorderRadius.circular(14),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: hasNext ? const Color(0xFF0284C7) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: hasNext ? Colors.transparent : borderCol.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Next',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: hasNext ? Colors.white : textMuted.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: hasNext ? Colors.white : textMuted.withValues(alpha: 0.3),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Direct Page jump chips
+          if (totalPages > 1 && totalPages <= 7) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(totalPages, (index) {
+                final isCurrent = index == currentPage;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: InkWell(
+                    onTap: () => _goToPage(index),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 32,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: isCurrent
+                            ? const Color(0xFF0284C7)
+                            : (isDark ? const Color(0xFF1F1F26) : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isCurrent ? Colors.transparent : borderCol,
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                            color: isCurrent ? Colors.white : textMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ],
       ),
     );
   }

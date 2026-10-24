@@ -1,7 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/gamification_service.dart';
+import '../theme/app_theme.dart';
 import '../screens/notices/notices_screen.dart';
 import '../screens/profile/widgets/avatar_selector_modal.dart';
 import '../screens/profile/settings_screen.dart';
@@ -29,11 +31,11 @@ class AppDrawer extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF1A1D24) : Colors.white,
+        backgroundColor: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: isDark ? const Color(0xFF282C37) : const Color(0xFFE2E8F0),
+            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
           ),
         ),
         title: Text(
@@ -41,7 +43,9 @@ class AppDrawer extends StatelessWidget {
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w700,
             fontSize: 18,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
           ),
         ),
         content: TextField(
@@ -50,27 +54,31 @@ class AppDrawer extends StatelessWidget {
           decoration: InputDecoration(
             hintText: 'Enter student name',
             hintStyle: GoogleFonts.roboto(
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted,
             ),
             filled: true,
-            fillColor: isDark ? const Color(0xFF222630) : const Color(0xFFF1F5F9),
+            fillColor: isDark
+                ? AppTheme.darkSurfaceElevated
+                : AppTheme.lightSurfaceElevated,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: isDark ? const Color(0xFF2B313E) : const Color(0xFFE2E8F0),
+                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: isDark ? const Color(0xFF2B313E) : const Color(0xFFE2E8F0),
+                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
               ),
             ),
           ),
           style: GoogleFonts.roboto(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            color: isDark
+                ? AppTheme.darkTextPrimary
+                : AppTheme.lightTextPrimary,
           ),
         ),
         actions: [
@@ -79,7 +87,9 @@ class AppDrawer extends StatelessWidget {
             child: Text(
               'Cancel',
               style: GoogleFonts.roboto(
-                color: isDark ? const Color(0xFF94A3B8) : Colors.grey,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -116,11 +126,19 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = gamification.isDarkMode;
-    final drawerBg = isDark ? const Color(0xFF11141A) : Colors.white;
-    final cardBg = isDark ? const Color(0xFF1A1D24) : const Color(0xFFF8FAFC);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
-    final textMuted = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final borderCol = isDark ? const Color(0xFF262A34) : const Color(0xFFE2E8F0);
+    final drawerBg = isDark
+        ? AppTheme.darkBackground
+        : AppTheme.lightBackground;
+    final cardBg = isDark
+        ? AppTheme.darkSurfaceElevated
+        : AppTheme.lightSurface;
+    final textPrimary = isDark
+        ? AppTheme.darkTextPrimary
+        : AppTheme.lightTextPrimary;
+    final textMuted = isDark
+        ? AppTheme.darkTextSecondary
+        : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
 
     return Drawer(
       backgroundColor: drawerBg,
@@ -145,11 +163,7 @@ class AppDrawer extends StatelessWidget {
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: textMuted,
-                      size: 22,
-                    ),
+                    icon: Icon(Icons.close_rounded, color: textMuted, size: 22),
                   ),
                 ],
               ),
@@ -176,8 +190,10 @@ class AppDrawer extends StatelessWidget {
                             children: [
                               // Avatar with tap to change
                               GestureDetector(
-                                onTap: () =>
-                                    AvatarSelectorModal.show(context, gamification),
+                                onTap: () => AvatarSelectorModal.show(
+                                  context,
+                                  gamification,
+                                ),
                                 child: Stack(
                                   children: [
                                     Container(
@@ -185,15 +201,25 @@ class AppDrawer extends StatelessWidget {
                                       height: 58,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
+                                        color: AvatarHelper.getColor(
+                                          gamification.currentAvatar,
+                                        ).withValues(alpha: 0.12),
                                         border: Border.all(
-                                          color: const Color(0xFF0284C7),
+                                          color: AvatarHelper.getColor(
+                                            gamification.currentAvatar,
+                                          ).withValues(alpha: 0.4),
                                           width: 2,
                                         ),
                                       ),
                                       child: Center(
-                                        child: Text(
-                                          gamification.currentAvatar,
-                                          style: const TextStyle(fontSize: 32),
+                                        child: Icon(
+                                          AvatarHelper.getIcon(
+                                            gamification.currentAvatar,
+                                          ),
+                                          color: AvatarHelper.getColor(
+                                            gamification.currentAvatar,
+                                          ),
+                                          size: 28,
                                         ),
                                       ),
                                     ),
@@ -240,7 +266,8 @@ class AppDrawer extends StatelessWidget {
                                         ),
                                         const SizedBox(width: 6),
                                         GestureDetector(
-                                          onTap: () => _showEditNameDialog(context),
+                                          onTap: () =>
+                                              _showEditNameDialog(context),
                                           child: Icon(
                                             Icons.edit_outlined,
                                             size: 15,
@@ -258,9 +285,12 @@ class AppDrawer extends StatelessWidget {
                                             vertical: 2.5,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF0284C7)
-                                                .withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: const Color(
+                                              0xFF0284C7,
+                                            ).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: Text(
                                             'Class ${gamification.userClass}',
@@ -364,12 +394,16 @@ class AppDrawer extends StatelessWidget {
                       textMuted: textMuted,
                       onTap: () {
                         Navigator.of(context).pop();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                NoticesScreen(gamification: gamification),
-                          ),
-                        );
+                        if (onOpenNotices != null) {
+                          onOpenNotices!();
+                        } else {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  NoticesScreen(gamification: gamification),
+                            ),
+                          );
+                        }
                       },
                     ),
 
@@ -481,8 +515,10 @@ class AppDrawer extends StatelessWidget {
                       onTap: () async {
                         final uri = Uri.parse('https://ncert.nic.in');
                         try {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
                         } catch (_) {}
                       },
                       borderRadius: BorderRadius.circular(14),
@@ -527,7 +563,7 @@ class AppDrawer extends StatelessWidget {
                     // Version Info
                     Center(
                       child: Text(
-                        'NCERT Books & News • v1.2.0\nOfficial Educational Resource App',
+                        'NCERT Books & News • v1.2.0\nEducational Resource App',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.roboto(
                           fontSize: 11,
@@ -537,7 +573,36 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: RichText(
+                        text: TextSpan(
+                          text: 'Powered by ',
+                          style: GoogleFonts.roboto(
+                            fontSize: 11,
+                            color: Colors.white,
+                          ),
+                          children: [
+                            TextSpan(
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  // nav to swynx.dev website
+                                  launchUrl(
+                                    Uri.parse('https://swynx.dev'),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                              text: 'SWYNX',
+                              style: GoogleFonts.roboto(
+                                color: const Color.fromARGB(255, 0, 81, 255),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -576,10 +641,7 @@ class AppDrawer extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: GoogleFonts.roboto(
-            fontSize: 10.5,
-            color: textMuted,
-          ),
+          style: GoogleFonts.roboto(fontSize: 10.5, color: textMuted),
         ),
       ],
     );
@@ -604,7 +666,9 @@ class AppDrawer extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1A1D24) : const Color(0xFFF8FAFC),
+          color: isDark
+              ? AppTheme.darkSurfaceElevated
+              : AppTheme.lightSurfaceElevated,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: borderCol),
         ),
@@ -667,19 +731,12 @@ class AppDrawer extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.roboto(
-                      fontSize: 11,
-                      color: textMuted,
-                    ),
+                    style: GoogleFonts.roboto(fontSize: 11, color: textMuted),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: textMuted,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right_rounded, color: textMuted, size: 20),
           ],
         ),
       ),

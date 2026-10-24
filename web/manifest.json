@@ -1,6 +1,6 @@
 {
-    "name": "ncert_books_app",
-    "short_name": "ncert_books_app",
+    "name": "NCERT Books & News",
+    "short_name": "NCERT Books & News",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -143,7 +143,7 @@ class _NcertBooksAppState extends State<NcertBooksApp> {
         ),
       ],
       child: MaterialApp(
-        title: 'NCERT Books and Solutions',
+        title: 'NCERT Books & News',
         debugShowCheckedModeBanner: false,
         scrollBehavior: const AppScrollBehavior(),
         themeMode: ThemeMode.dark,

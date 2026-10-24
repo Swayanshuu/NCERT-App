@@ -11,7 +11,7 @@ class NcertNoticesService extends ChangeNotifier {
   NcertNoticesService._internal();
 
   static const String _ncertUpdatesUrl = 'https://ncert.nic.in/?ln=en';
-  static const String _cacheKey = 'ncert_official_notices_cache_v2';
+  static const String _cacheKey = 'ncert_official_notices_cache_v3';
 
   List<NcertNotice> _notices = [];
   bool _isLoading = false;
@@ -32,7 +32,10 @@ class NcertNoticesService extends ChangeNotifier {
         final List<dynamic> decoded = jsonDecode(cachedJson);
         final loaded = decoded
             .map((item) => NcertNotice.fromJson(item as Map<String, dynamic>))
-            .where((n) => n.title.isNotEmpty && n.pdfUrl.isNotEmpty)
+            .where((n) =>
+                n.title.isNotEmpty &&
+                n.pdfUrl.isNotEmpty &&
+                !isGenericOrInvalidTitle(n.title, n.pdfUrl))
             .toList();
         if (loaded.isNotEmpty) {
           _notices = loaded;
@@ -113,6 +116,7 @@ class NcertNoticesService extends ChangeNotifier {
 
       final cleanTitle = _cleanText(rawText);
       if (cleanTitle.length < 16) continue;
+      if (isGenericOrInvalidTitle(cleanTitle, rawHref)) continue;
 
       // Filter for notices, announcements, circulars, press releases, PDFs
       final isRelevant = rawHref.contains('.pdf') ||
@@ -155,10 +159,60 @@ class NcertNoticesService extends ChangeNotifier {
       );
 
       newCounter++;
-      if (list.length >= 25) break; // Keep top 25 fresh notices
+      if (list.length >= 60) break;
     }
 
     return list;
+  }
+
+  static bool isGenericOrInvalidTitle(String title, String href) {
+    final lower = title.toLowerCase().trim();
+    final lowerHref = href.toLowerCase();
+
+    // Exclude browser cache / clear temp troubleshooting guides
+    if (lowerHref.contains('clearcache') ||
+        lowerHref.contains('cacheinbrowser') ||
+        lower.contains('clear your browser cache')) {
+      return true;
+    }
+
+    final genericPhrases = [
+      'click to know more',
+      'click here to know more',
+      'click here',
+      'click to view',
+      'click to access',
+      'click to download',
+      'click here to visit',
+      'other announcements',
+      'seminar/ conference/ workshop',
+      '50 years of ncert',
+      'view more',
+      'read more',
+      'know more',
+      'detailed advertisement',
+    ];
+
+    for (final phrase in genericPhrases) {
+      if (lower == phrase || lower == '$phrase.') return true;
+    }
+
+    if (lower.startsWith('click to know') ||
+        lower.startsWith('click here to') ||
+        lower.startsWith('click to view') ||
+        lower.startsWith('click here') ||
+        lower.startsWith('(click here')) {
+      if (lower.length < 40) return true;
+    }
+
+    if (lower == 'seminar' ||
+        lower == 'announcements' ||
+        lower == 'notices' ||
+        lower == 'circulars') {
+      return true;
+    }
+
+    return false;
   }
 
   String _cleanText(String raw) {
@@ -173,6 +227,11 @@ class NcertNoticesService extends ChangeNotifier {
     text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
     // Remove leading non-alphanumeric noise
     text = text.replaceAll(RegExp(r'^[^\w\(\"\[]+'), '');
+    // Strip trailing "(Click here to view notice)" noise if attached to real title
+    text = text.replaceAll(
+      RegExp(r'\s*-\s*\(?\s*Click here to[^\)]*\)?', caseSensitive: false),
+      '',
+    ).trim();
     return text;
   }
 

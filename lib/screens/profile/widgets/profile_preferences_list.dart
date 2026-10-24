@@ -94,7 +94,7 @@ class ProfilePreferencesList extends StatelessWidget {
               ),
             ),
             subtitle: Text(
-              'NCERT Books & Solutions v1.0.0',
+              'NCERT Books & News v1.0.0',
               style: GoogleFonts.roboto(
                 fontSize: 12,
                 color: const Color(0xFF777777),

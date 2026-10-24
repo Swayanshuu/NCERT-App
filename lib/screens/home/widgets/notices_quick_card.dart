@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../services/gamification_service.dart';
 import '../../../services/ncert_notices_service.dart';
+import '../../../theme/app_theme.dart';
 import '../../notices/notices_screen.dart';
 
 class NoticesQuickCard extends StatelessWidget {
@@ -20,18 +21,26 @@ class NoticesQuickCard extends StatelessWidget {
       animation: NcertNoticesService.instance,
       builder: (context, _) {
         final noticesService = NcertNoticesService.instance;
-        final latestNotice = noticesService.notices.isNotEmpty
-            ? noticesService.notices.first
-            : null;
+        final validNotices = noticesService.notices
+            .where((n) =>
+                !NcertNoticesService.isGenericOrInvalidTitle(n.title, n.pdfUrl))
+            .toList();
+        final latestNotice =
+            validNotices.isNotEmpty ? validNotices.first : null;
 
-        const cardBg = Color.fromARGB(
-          255,
-          255,
-          123,
-          0,
-        ); // High-contrast clean off-white
-        const textTitle = Color(0xFF0F172A);
-        const textSubtitle = Color(0xFF475569);
+        final cardBg = isDark
+            ? AppTheme.darkSurfaceElevated
+            : const Color(0xFFF1F5F9);
+        final cardBorder = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+        final textTitle =
+            isDark ? AppTheme.darkTextPrimary : const Color(0xFF0F172A);
+        final textSubtitle =
+            isDark ? AppTheme.darkTextSecondary : const Color(0xFF475569);
+        final pillBg = isDark
+            ? AppTheme.darkSurface
+            : const Color(0xFFE2E8F0);
+        final pillText =
+            isDark ? AppTheme.darkTextPrimary : const Color(0xFF334155);
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -44,12 +53,13 @@ class NoticesQuickCard extends StatelessWidget {
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(210, 255, 255, 255),
-                borderRadius: BorderRadius.circular(22),
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cardBorder, width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,9 +74,7 @@ class NoticesQuickCard extends StatelessWidget {
                         height: 38,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(
-                            0xFF0284C7,
-                          ).withValues(alpha: 0.15),
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.15),
                         ),
                         child: const Center(
                           child: Icon(
@@ -98,10 +106,10 @@ class NoticesQuickCard extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Icon(
+                                Icon(
                                   Icons.chevron_right_rounded,
                                   size: 18,
-                                  color: Color(0xFF0F172A),
+                                  color: textTitle,
                                 ),
                               ],
                             ),
@@ -128,7 +136,7 @@ class NoticesQuickCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2E8F0),
+                          color: pillBg,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -148,7 +156,7 @@ class NoticesQuickCard extends StatelessWidget {
                               style: GoogleFonts.roboto(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF334155),
+                                color: pillText,
                               ),
                             ),
                           ],
@@ -169,16 +177,16 @@ class NoticesQuickCard extends StatelessWidget {
                           vertical: 4.5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE2EBF0),
+                          color: pillBg,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.picture_as_pdf_rounded,
                               size: 13,
-                              color: Color(0xFF475569),
+                              color: textSubtitle,
                             ),
                             const SizedBox(width: 5),
                             Text(
@@ -186,7 +194,7 @@ class NoticesQuickCard extends StatelessWidget {
                               style: GoogleFonts.roboto(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF334155),
+                                color: pillText,
                               ),
                             ),
                           ],
@@ -201,9 +209,7 @@ class NoticesQuickCard extends StatelessWidget {
                           vertical: 4.5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF0284C7,
-                          ).withValues(alpha: 0.14),
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(

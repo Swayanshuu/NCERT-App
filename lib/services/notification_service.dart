@@ -21,7 +21,14 @@ class NotificationService {
   static const int _id22HoursEmergency = 102;
   static const int _idDailyBonus = 103;
 
+  /// Notifications are disabled for now.
+  static const bool isEnabled = false;
+
   Future<void> init() async {
+    if (!isEnabled) {
+      _isInitialized = true;
+      return;
+    }
     if (_isInitialized || kIsWeb || !(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
       _isInitialized = true;
       return;
@@ -85,6 +92,7 @@ class NotificationService {
     required bool canClaimBonus,
     required int hoursUntilBonus,
   }) async {
+    if (!isEnabled) return;
     if (kIsWeb || !(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) return;
     await init();
 

@@ -51,7 +51,7 @@ class HomeHeader extends StatelessWidget {
                 ],
               ),
               Text(
-                'Books & Solutions',
+                'Books & News',
                 style: GoogleFonts.outfit(
                   fontSize: 10,
                   color: const Color.fromARGB(255, 142, 142, 142),

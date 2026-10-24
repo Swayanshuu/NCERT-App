@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -23,7 +22,6 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
   bool _adFailed = false;
-  bool _triedFallback = false;
 
   @override
   void initState() {
@@ -31,17 +29,13 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
     _loadBanner();
   }
 
-  void _loadBanner({bool useTestId = false}) async {
+  void _loadBanner() async {
     if (!AdService.shouldShowAds) {
       if (mounted) setState(() => _adFailed = true);
       return;
     }
 
-    final adUnitId = useTestId
-        ? (Platform.isAndroid
-              ? 'ca-app-pub-3940256099942544/6300978111'
-              : 'ca-app-pub-3940256099942544/2934735716')
-        : AdService.bannerAdUnitId;
+    final adUnitId = AdService.bannerAdUnitId;
 
     if (adUnitId.isEmpty) {
       if (mounted) setState(() => _adFailed = true);
@@ -65,16 +59,11 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
           onAdFailedToLoad: (ad, error) {
             ad.dispose();
             if (mounted) {
-              if (!_triedFallback && !useTestId) {
-                _triedFallback = true;
-                _loadBanner(useTestId: true);
-              } else {
-                setState(() {
-                  _isLoaded = false;
-                  _adFailed = true;
-                  _bannerAd = null;
-                });
-              }
+              setState(() {
+                _isLoaded = false;
+                _adFailed = true;
+                _bannerAd = null;
+              });
             }
           },
         ),
@@ -83,16 +72,11 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
       await ad.load();
     } catch (_) {
       if (mounted) {
-        if (!_triedFallback && !useTestId) {
-          _triedFallback = true;
-          _loadBanner(useTestId: true);
-        } else {
-          setState(() {
-            _isLoaded = false;
-            _adFailed = true;
-            _bannerAd = null;
-          });
-        }
+        setState(() {
+          _isLoaded = false;
+          _adFailed = true;
+          _bannerAd = null;
+        });
       }
     }
   }

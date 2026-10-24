@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Clean, Scandinavian & Minimalist Design System for "NCERT Books and Solutions"
+/// Clean, Scandinavian & Minimalist Design System for "NCERT Books & News"
 /// Featuring modern pastel card surfaces, high-contrast typography, and tactile UI tokens.
 class AppTheme {
   // ==========================================

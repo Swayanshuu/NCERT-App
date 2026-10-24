@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/logo.png" width="120" height="120" alt="NCERT Books App Logo" />
-  <h1>NCERT Books & Offline Digital Reader</h1>
-  <p><strong>A Modern, Fast, and Gamified NCERT Textbooks & Solutions Reader for Android & Tablets.</strong></p>
+  <h1>NCERT Books & News</h1>
+  <p><strong>A Modern, Fast, and Gamified NCERT Textbooks & Circulars Reader for Android & Tablets.</strong></p>
   <p>Engineered with Flutter • Threads Obsidian Dark Aesthetic • 100% Offline Vault</p>
 </div>
 
@@ -9,7 +9,7 @@
 
 ## 📖 Overview
 
-**NCERT Books & Offline Digital Reader** is a high-performance Flutter application designed for students and educators from Class 1 through Class 12. It provides instant access to official NCERT textbooks, chapter-by-chapter PDF reading, offline vault storage, and study progress tracking.
+**NCERT Books & News** is a high-performance Flutter application designed for students and educators from Class 1 through Class 12. It provides instant access to official NCERT textbooks, chapter-by-chapter PDF reading, offline vault storage, and study progress tracking.
 
 The app features a **Threads by Meta-inspired Obsidian Dark Theme** (`#101010` backdrop, `#181818` card surfaces, `#282828` hairline borders, and pure white typography), paired with zero-clutter semantic static icons and Google Fonts (Roboto & Syne Tactile).
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ncert_books_app/screens/onboarding/onboarding_screen.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
 import 'package:ncert_books_app/services/ncert_repository.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
@@ -17,7 +18,6 @@ import 'package:ncert_books_app/screens/books/subject_books_screen.dart';
 import 'package:ncert_books_app/screens/explore/explore_screen.dart';
 import 'package:ncert_books_app/screens/books/downloads_screen.dart';
 import 'package:ncert_books_app/screens/progress/progress_screen.dart';
-import 'package:ncert_books_app/screens/profile/profile_screen.dart';
 import 'package:ncert_books_app/screens/notices/notices_screen.dart';
 import 'package:ncert_books_app/screens/home/widgets/notices_quick_card.dart';
 import 'package:ncert_books_app/widgets/app_drawer.dart';
@@ -150,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   Text(
-                    '${widget.gamification.userName}',
+                    widget.gamification.userName,
                     style: GoogleFonts.outfit(
                       fontSize: 22,
                       // fontWeight: FontWeight.w700,
@@ -236,13 +236,25 @@ class _HomeScreenState extends State<HomeScreen> {
       controller: _confettiController,
       child: AppBackground(
         child: Scaffold(
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              // nav to onbaording screen
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) =>
+                      OnboardingScreen(gamification: widget.gamification),
+                ),
+              );
+            },
+          ),
           key: _scaffoldKey,
           backgroundColor: Colors.transparent,
           extendBody: true,
-          endDrawer: AppDrawer(
+          drawer: AppDrawer(
             gamification: widget.gamification,
             onOpenDownloads: () => setState(() => _currentTabIndex = 2),
             onOpenProgress: () => setState(() => _currentTabIndex = 3),
+            onOpenNotices: () => setState(() => _currentTabIndex = 4),
           ),
           body: SafeArea(
             top: true,
@@ -258,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     gamification: widget.gamification,
                   ),
                   ProgressScreen(gamification: widget.gamification),
-                  ProfileScreen(gamification: widget.gamification),
+                  NoticesScreen(gamification: widget.gamification),
                 ],
               ),
             ),
@@ -295,9 +307,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: 'Progress',
                 ),
                 GlassNavItem(
-                  icon: Icons.person_outline_rounded,
-                  selectedIcon: Icons.person_rounded,
-                  label: 'Profile',
+                  icon: Icons.campaign_outlined,
+                  selectedIcon: Icons.campaign_rounded,
+                  label: 'Notices',
                 ),
               ],
             ),

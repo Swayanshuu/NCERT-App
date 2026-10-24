@@ -70,7 +70,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ? widget.gamification.currentAvatar
         : GamificationService.avatars.first;
     _nameController = TextEditingController(
-      text: widget.gamification.userName.isNotEmpty &&
+      text:
+          widget.gamification.userName.isNotEmpty &&
               widget.gamification.userName != 'Student'
           ? widget.gamification.userName
           : 'Student',
@@ -119,7 +120,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final activeCompanion = _activeCompanion;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
+      backgroundColor: isDark
+          ? AppTheme.darkBackground
+          : AppTheme.lightBackground,
       body: SafeArea(
         bottom: false,
         child: MaxContentConstraint(
@@ -135,7 +138,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     // Top App Pill Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: isDark
                             ? const Color(0xFF181822)
@@ -162,12 +168,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'SWYNX • NCERT BOOKS & SOLUTIONS',
+                            'SWYNX • NCERT Books & News',
                             style: GoogleFonts.roboto(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.8,
-                              color: isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563),
+                              color: isDark
+                                  ? const Color(0xFFD1D5DB)
+                                  : const Color(0xFF4B5563),
                             ),
                           ),
                         ],
@@ -194,7 +202,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       style: GoogleFonts.roboto(
                         fontSize: 14,
                         height: 1.45,
-                        color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                        color: isDark
+                            ? const Color(0xFF9CA3AF)
+                            : const Color(0xFF6B7280),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -237,11 +247,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        (isDark ? const Color(0xFF0C0C0F) : AppTheme.lightBackground)
+                        (isDark
+                                ? const Color(0xFF0C0C0F)
+                                : AppTheme.lightBackground)
                             .withValues(alpha: 0.0),
-                        (isDark ? const Color(0xFF0C0C0F) : AppTheme.lightBackground)
+                        (isDark
+                                ? const Color(0xFF0C0C0F)
+                                : AppTheme.lightBackground)
                             .withValues(alpha: 0.92),
-                        (isDark ? const Color(0xFF0C0C0F) : AppTheme.lightBackground),
+                        (isDark
+                            ? const Color(0xFF0C0C0F)
+                            : AppTheme.lightBackground),
                       ],
                       stops: const [0.0, 0.35, 1.0],
                     ),
@@ -259,12 +275,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               width: double.infinity,
                               height: 54,
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.white : const Color(0xFF18181B),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF18181B),
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (isDark ? Colors.white : Colors.black)
-                                        .withValues(alpha: 0.16),
+                                    color:
+                                        (isDark ? Colors.white : Colors.black)
+                                            .withValues(alpha: 0.16),
                                     blurRadius: 18,
                                     offset: const Offset(0, 4),
                                   ),
@@ -348,9 +367,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: (activeCompanion['accent'] as Color).withValues(alpha: 0.16),
+              color: (activeCompanion['accent'] as Color).withValues(
+                alpha: 0.16,
+              ),
               border: Border.all(
-                color: (activeCompanion['accent'] as Color).withValues(alpha: 0.4),
+                color: (activeCompanion['accent'] as Color).withValues(
+                  alpha: 0.4,
+                ),
                 width: 1.5,
               ),
             ),
@@ -374,7 +397,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
-                    color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                    color: isDark
+                        ? const Color(0xFF9CA3AF)
+                        : const Color(0xFF6B7280),
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -391,7 +416,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     hintStyle: GoogleFonts.roboto(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? const Color(0xFF4B5563) : const Color(0xFF9CA3AF),
+                      color: isDark
+                          ? const Color(0xFF4B5563)
+                          : const Color(0xFF9CA3AF),
                     ),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 4),
@@ -446,10 +473,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E202B) : const Color(0xFFEEF2FF),
+                color: isDark
+                    ? const Color(0xFF1E202B)
+                    : const Color(0xFFEEF2FF),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF2E3348) : const Color(0xFFC7D2FE),
+                  color: isDark
+                      ? const Color(0xFF2E3348)
+                      : const Color(0xFFC7D2FE),
                   width: 0.8,
                 ),
               ),
@@ -500,7 +531,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       border: Border.all(
                         color: isSelected
                             ? (isDark ? Colors.white : const Color(0xFF18181B))
-                            : (isDark ? const Color(0xFF22222C) : const Color(0xFFE5E7EB)),
+                            : (isDark
+                                  ? const Color(0xFF22222C)
+                                  : const Color(0xFFE5E7EB)),
                         width: isSelected ? 1.5 : 1.0,
                       ),
                       boxShadow: isSelected
@@ -527,7 +560,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 Icon(
                                   Icons.check_rounded,
                                   size: 13,
-                                  color: isDark ? const Color(0xFF18181B) : Colors.white,
+                                  color: isDark
+                                      ? const Color(0xFF18181B)
+                                      : Colors.white,
                                 ),
                                 const SizedBox(width: 4),
                               ],
@@ -535,10 +570,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 'Class $cls',
                                 style: GoogleFonts.roboto(
                                   fontSize: 12.5,
-                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
                                   color: isSelected
-                                      ? (isDark ? const Color(0xFF18181B) : Colors.white)
-                                      : (isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151)),
+                                      ? (isDark
+                                            ? const Color(0xFF18181B)
+                                            : Colors.white)
+                                      : (isDark
+                                            ? const Color(0xFFD1D5DB)
+                                            : const Color(0xFF374151)),
                                 ),
                               ),
                             ],
@@ -611,13 +652,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? (isDark ? const Color(0xFF1C1C26) : const Color(0xFFF8FAFC))
+                          ? (isDark
+                                ? const Color(0xFF1C1C26)
+                                : const Color(0xFFF8FAFC))
                           : (isDark ? const Color(0xFF14141A) : Colors.white),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isSelected
                             ? accentColor
-                            : (isDark ? const Color(0xFF22222C) : const Color(0xFFE5E7EB)),
+                            : (isDark
+                                  ? const Color(0xFF22222C)
+                                  : const Color(0xFFE5E7EB)),
                         width: isSelected ? 1.8 : 1.0,
                       ),
                       boxShadow: isSelected
@@ -677,7 +722,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               style: GoogleFonts.roboto(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: isDark ? Colors.white : const Color(0xFF111827),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF111827),
                                 letterSpacing: -0.2,
                               ),
                             ),
@@ -688,7 +735,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               style: GoogleFonts.roboto(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w500,
-                                color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                                color: isDark
+                                    ? const Color(0xFF9CA3AF)
+                                    : const Color(0xFF6B7280),
                               ),
                             ),
                           ],
@@ -712,7 +761,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'icon': Icons.offline_bolt_rounded,
         'color': Color(0xFFF59E0B),
         'title': 'Offline Study Vault',
-        'desc': 'Download books once and read anywhere with zero internet usage.',
+        'desc':
+            'Download books once and read anywhere with zero internet usage.',
       },
       {
         'icon': Icons.local_fire_department_rounded,
@@ -724,7 +774,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         'icon': Icons.auto_awesome_rounded,
         'color': Color(0xFF8B5CF6),
         'title': 'Official NCERT Syllabus',
-        'desc': 'Exact textbook chapters, solutions, and diagrams for Classes 1 to 12.',
+        'desc':
+            'Exact textbook chapters, solutions, and diagrams for Classes 1 to 12.',
       },
     ];
 
@@ -757,11 +808,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     shape: BoxShape.circle,
                     color: color.withValues(alpha: 0.15),
                   ),
-                  child: Icon(
-                    f['icon'] as IconData,
-                    color: color,
-                    size: 18,
-                  ),
+                  child: Icon(f['icon'] as IconData, color: color, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -773,7 +820,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: GoogleFonts.roboto(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : const Color(0xFF111827),
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF111827),
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -783,7 +832,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: GoogleFonts.roboto(
                           fontSize: 11.5,
                           height: 1.35,
-                          color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                          color: isDark
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFF6B7280),
                         ),
                       ),
                     ],
