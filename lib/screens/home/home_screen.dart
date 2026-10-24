@@ -1,27 +1,24 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ncert_books_app/models/ncert_book.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
 import 'package:ncert_books_app/services/ncert_repository.dart';
-import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
+import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/widgets/app_background.dart';
-import 'package:ncert_books_app/widgets/ad_banner_widget.dart';
 import 'package:ncert_books_app/widgets/confetti_overlay.dart';
-import 'package:ncert_books_app/widgets/glass/glass_search_bar.dart';
 import 'package:ncert_books_app/widgets/glass/glass_navigation_bar.dart';
-import 'package:ncert_books_app/screens/home/widgets/hero_player_card.dart';
 import 'package:ncert_books_app/screens/home/widgets/home_header.dart';
+import 'package:ncert_books_app/screens/home/widgets/student_journal_hero_card.dart';
+import 'package:ncert_books_app/screens/home/widgets/beyond_campus_stories.dart';
 import 'package:ncert_books_app/screens/home/widgets/class_picker_modal.dart';
-import 'package:ncert_books_app/screens/home/widgets/subject_filter_bar.dart';
-import 'package:ncert_books_app/screens/home/widgets/home_books_grid.dart';
+import 'package:ncert_books_app/screens/home/widgets/subject_bento_grid.dart';
+import 'package:ncert_books_app/screens/books/subject_books_screen.dart';
 import 'package:ncert_books_app/screens/explore/explore_screen.dart';
-import 'package:ncert_books_app/screens/explore/widgets/subject_card.dart';
 import 'package:ncert_books_app/screens/books/downloads_screen.dart';
 import 'package:ncert_books_app/screens/progress/progress_screen.dart';
 import 'package:ncert_books_app/screens/profile/profile_screen.dart';
+import 'package:shimmer_text/shimmer_text.dart';
 
 class HomeScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -34,20 +31,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final NcertRepository _repository = NcertRepository();
-  final TextEditingController _searchController = TextEditingController();
   final ScrollController _homeScrollController = ScrollController();
-  final GlobalKey<DownloadsScreenState> _downloadsKey = GlobalKey<DownloadsScreenState>();
+  final GlobalKey<DownloadsScreenState> _downloadsKey =
+      GlobalKey<DownloadsScreenState>();
   late ConfettiController _confettiController;
 
   int _currentTabIndex = 0;
   String _selectedClass = '10';
-  String _selectedFilterSubject = 'All';
-  String _searchQuery = '';
-  Set<int> _homeAdRowIndices = {};
-
-  int _homeCurrentPage = 1;
-  static const int _homePageSize = 8;
-  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -57,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     _selectedClass = widget.gamification.userClass;
     widget.gamification.addListener(_onStateChange);
-    _homeScrollController.addListener(_onHomeScroll);
     _initCatalog();
   }
 
@@ -71,66 +60,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     widget.gamification.removeListener(_onStateChange);
-    _homeScrollController.removeListener(_onHomeScroll);
     _homeScrollController.dispose();
-    _searchController.dispose();
     _confettiController.dispose();
     super.dispose();
   }
 
   void _onStateChange() {
     if (mounted) setState(() {});
-  }
-
-  void _onHomeScroll() {
-    if (!_homeScrollController.hasClients || _isLoadingMore) return;
-    final maxScroll = _homeScrollController.position.maxScrollExtent;
-    final currentScroll = _homeScrollController.position.pixels;
-
-    if (currentScroll >= maxScroll - 350) {
-      final realSubjects = _repository.getSubjectsForClass(_selectedClass);
-      int totalBooks = 0;
-      if (_searchQuery.isNotEmpty) {
-        totalBooks = _repository.searchBooks(_searchQuery).length;
-      } else if (_selectedFilterSubject != 'All') {
-        totalBooks = _repository
-            .getBooks(_selectedClass, _selectedFilterSubject)
-            .length;
-      } else {
-        for (final s in realSubjects) {
-          totalBooks += _repository.getBooks(_selectedClass, s).length;
-        }
-      }
-
-      if (_homeCurrentPage * _homePageSize < totalBooks) {
-        setState(() {
-          _isLoadingMore = true;
-          _homeCurrentPage++;
-        });
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) setState(() => _isLoadingMore = false);
-        });
-      }
-    }
-  }
-
-  void _randomizeHomeAdPositions(int totalRows) {
-    if (totalRows <= 1) {
-      _homeAdRowIndices = {0};
-      return;
-    }
-    final Set<int> positions = {};
-    final rng = math.Random((_selectedClass.hashCode ^ (DateTime.now().minute ~/ 5)));
-    final count = totalRows >= 4 ? 2 : 1;
-    final available = List<int>.generate(totalRows - 1, (i) => i);
-    available.shuffle(rng);
-    for (int i = 0; i < count && i < available.length; i++) {
-      positions.add(available[i]);
-    }
-    if (positions.isEmpty && totalRows > 1) {
-      positions.add(0);
-    }
-    _homeAdRowIndices = positions;
   }
 
   void _showClassPicker() {
@@ -144,128 +80,33 @@ class _HomeScreenState extends State<HomeScreen> {
         widget.gamification.setUserClass(cls);
         setState(() {
           _selectedClass = cls;
-          _homeCurrentPage = 1;
-          _selectedFilterSubject = 'All';
-          _homeAdRowIndices.clear();
         });
       },
     );
   }
 
-  List<NcertBook> _computeBooksToDisplay(List<String> realSubjects) {
-    if (_searchQuery.isNotEmpty) {
-      return _repository.searchBooks(_searchQuery);
+  String _getTimeGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'afternoon';
+    } else {
+      return 'evening';
     }
-    if (_selectedFilterSubject != 'All') {
-      return _repository.getBooks(_selectedClass, _selectedFilterSubject);
-    }
-    final List<NcertBook> all = [];
-    for (final s in realSubjects) {
-      all.addAll(_repository.getBooks(_selectedClass, s));
-    }
-    return all;
-  }
-
-  List<Widget> _buildHomeSubjectRowsWithAds(
-    int columns,
-    bool isDark,
-    List<String> subjects,
-  ) {
-    final List<Widget> slivers = [];
-    final subjectRows = <List<String>>[];
-    for (int i = 0; i < subjects.length; i += columns) {
-      final end = (i + columns > subjects.length) ? subjects.length : i + columns;
-      subjectRows.add(subjects.sublist(i, end));
-    }
-
-    if (_homeAdRowIndices.isEmpty && subjectRows.isNotEmpty) {
-      _randomizeHomeAdPositions(subjectRows.length);
-    }
-
-    for (int rowIndex = 0; rowIndex < subjectRows.length; rowIndex++) {
-      final row = subjectRows[rowIndex];
-
-      // 1. Add Subject Row of cards (2 cards in one row on mobile)
-      slivers.add(
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (int c = 0; c < columns; c++)
-                  if (c < row.length)
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: c == 0 ? 0 : 6,
-                          right: c == columns - 1 ? 0 : 6,
-                        ),
-                        child: SubjectCard(
-                          subjectName: row[c],
-                          bookCount: _repository.getBooks(_selectedClass, row[c]).length,
-                          isDark: isDark,
-                          onTap: () {
-                            setState(() {
-                              _selectedFilterSubject = row[c];
-                              _homeCurrentPage = 1;
-                            });
-                            widget.gamification.recordSubjectExplored(row[c]);
-                          },
-                        ),
-                      ),
-                    )
-                  else
-                    const Expanded(child: SizedBox()),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      // 2. Between rows, insert AdBannerWidget at random positions
-      if (_homeAdRowIndices.contains(rowIndex)) {
-        slivers.add(
-          SliverToBoxAdapter(
-            key: ValueKey('home_subj_ad_${rowIndex}_$_selectedClass'),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: AdBannerWidget(
-                margin: EdgeInsets.zero,
-                showSectionLabel: true,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-
-    return slivers;
   }
 
   Widget _buildHomeContent(BuildContext context) {
     final isDark = widget.gamification.isDarkMode;
     final realSubjects = _repository.getSubjectsForClass(_selectedClass);
-    final booksToDisplay = _computeBooksToDisplay(realSubjects);
-
-    final filterTabs = [
-      {
-        'title': 'All',
-        'icon': Icons.grid_view_rounded,
-        'color': isDark ? Colors.white : const Color(0xFF18181B),
-      },
-      ...realSubjects.map(
-        (subj) => {
-          'title': subj,
-          'icon': AppTheme.getSubjectIcon(subj),
-          'color': AppTheme.getSubjectColor(subj),
-        },
-      ),
-    ];
+    final totalResources = realSubjects.fold<int>(
+      0,
+      (sum, s) => sum + _repository.getBooks(_selectedClass, s).length,
+    );
 
     return RefreshIndicator(
       color: Colors.white,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: AppTheme.darkBackground,
       onRefresh: () async {
         await _repository.loadCatalog();
         if (mounted) setState(() {});
@@ -274,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
         controller: _homeScrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // 1. Top Header with SWYNX Shimmer Branding
+          // 1. Top Header with brand 'alcademy.', ONLINE indicator, and hamburger menu
           SliverToBoxAdapter(
             child: HomeHeader(
               isDark: isDark,
@@ -282,124 +123,90 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 2. Student Hero Banner Card
+          // 2. Greeting: 'Good evening, swayanshu.'
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(
                 left: 20,
                 right: 20,
-                top: 10,
-                bottom: 8,
-              ),
-              child: HeroPlayerCard(
-                gamification: widget.gamification,
-                onAvatarTap: () => setState(() => _currentTabIndex = 4),
-                onClassTap: _showClassPicker,
-              ),
-            ),
-          ),
-
-          // 3. Search Bar
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: GlassSearchBar(
-                controller: _searchController,
-                isDark: isDark,
-                hintText:
-                    'Search Class $_selectedClass books, subjects, chapters...',
-                onChanged: (query) {
-                  setState(() {
-                    _searchQuery = query;
-                    _homeCurrentPage = 1;
-                  });
-                },
-                onClear: () {
-                  setState(() {
-                    _searchController.clear();
-                    _searchQuery = '';
-                    _homeCurrentPage = 1;
-                  });
-                },
-              ),
-            ),
-          ),
-
-          // 4. Subject Filter Bar (horizontal chips with static colors)
-          SliverToBoxAdapter(
-            child: SubjectFilterBar(
-              selectedClass: _selectedClass,
-              selectedSubject: _selectedFilterSubject,
-              hasActiveFilter:
-                  _selectedFilterSubject != 'All' || _searchQuery.isNotEmpty,
-              filterTabs: filterTabs,
-              isDark: isDark,
-              onSubjectSelected: (subj) {
-                setState(() {
-                  _selectedFilterSubject = subj;
-                  _homeCurrentPage = 1;
-                });
-                widget.gamification.recordSubjectExplored(subj);
-              },
-              onClearFilter: () {
-                setState(() {
-                  _selectedFilterSubject = 'All';
-                  _searchController.clear();
-                  _searchQuery = '';
-                  _homeCurrentPage = 1;
-                });
-              },
-            ),
-          ),
-
-          // 5. Subject Cards Grid (2 cards in a row with ads randomly between rows)
-          if (_selectedFilterSubject == 'All' && _searchQuery.isEmpty) ...[
-            ..._buildHomeSubjectRowsWithAds(
-              AppResponsive.getGridColumnCount(
-                context,
-                availableWidth: MediaQuery.of(context).size.width,
-              ),
-              isDark,
-              realSubjects,
-            ),
-          ],
-
-          // 6. Section Title
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 14,
+                top: 8,
                 bottom: 12,
               ),
-              child: Text(
-                _searchQuery.isNotEmpty
-                    ? 'Search Results (${booksToDisplay.length})'
-                    : (_selectedFilterSubject == 'All'
-                          ? 'Class $_selectedClass Textbooks (${booksToDisplay.length})'
-                          : '$_selectedFilterSubject Textbooks (${booksToDisplay.length})'),
-                style: GoogleFonts.roboto(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : const Color(0xFF111827),
-                  letterSpacing: -0.3,
-                ),
+              child: Row(
+                children: [
+                  Text(
+                    'Good ${_getTimeGreeting()}, ',
+                    style: GoogleFonts.outfit(
+                      fontSize: 23,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                    ),
+                  ),
+                  ShimmerText(
+                    text: '${widget.gamification.userName}.',
+                    textSize: 23,
+                    textColor: isDark ? Colors.white : const Color(0xFF111827),
+                    shiningColor: const Color.fromARGB(255, 102, 102, 102),
+                    letterspacing: -0.4,
+                    textFamily: GoogleFonts.outfit().fontFamily ?? '',
+                  ),
+                ],
               ),
             ),
           ),
 
-          // 7. Books Grid
-          HomeBooksGrid(
-            booksToDisplay: booksToDisplay,
-            currentPage: _homeCurrentPage,
-            pageSize: _homePageSize,
-            isDark: isDark,
-            gamification: widget.gamification,
-            onStateChanged: () {
-              if (mounted) setState(() {});
-            },
+          // 3. Hero Card: 'THE STUDENT JOURNAL' (Teal gradient, 24 OCT, Evening chill mode!, notebook graphic, resources count, Class pill)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 24),
+              child: StudentJournalHeroCard(
+                totalResources: totalResources,
+                selectedClass: _selectedClass,
+                isDark: isDark,
+                onPillTap: _showClassPicker,
+              ),
+            ),
           ),
+
+          // 4. Section 1: 'STORIES & UPDATES: Beyond textbook' (Mind maps, Developer note, CBSE updates, Formulas)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: BeyondCampusStories(isDark: isDark),
+            ),
+          ),
+
+          // 6. Section 3: 'THE STUDY SHELF: Your subjects' (Bento Grid of subjects with watermarks, icons, diagonal arrows, and 'Change class' button)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: SubjectBentoGrid(
+                selectedClass: _selectedClass,
+                selectedSubject: '',
+                subjects: realSubjects,
+                isDark: isDark,
+                gamification: widget.gamification,
+                getBookCount: (subj) =>
+                    _repository.getBooks(_selectedClass, subj).length,
+                onChangeClassTap: _showClassPicker,
+                onSubjectSelected: (subj) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => SubjectBooksScreen(
+                        className: _selectedClass,
+                        subjectName: subj,
+                        gamification: widget.gamification,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // 7. Bottom spacer to comfortably clear floating glass navigation bar
+          const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
     );
@@ -412,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: AppBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
+          extendBody: true,
           body: SafeArea(
             top: true,
             bottom: false,
@@ -448,9 +256,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: 'Home',
                 ),
                 GlassNavItem(
-                  icon: Icons.explore_outlined,
-                  selectedIcon: Icons.explore_rounded,
-                  label: 'Explore',
+                  icon: Icons.search_outlined,
+                  selectedIcon: Icons.search_rounded,
+                  label: 'Search',
                 ),
                 GlassNavItem(
                   icon: Icons.library_books_outlined,

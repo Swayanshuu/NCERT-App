@@ -1,18 +1,14 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ncert_books_app/models/ncert_book.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
 import 'package:ncert_books_app/services/ncert_repository.dart';
+import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
 import 'package:ncert_books_app/widgets/glass/glass_search_bar.dart';
-import 'package:ncert_books_app/screens/explore/bloc/explore_bloc.dart';
-import 'package:ncert_books_app/screens/explore/widgets/subject_card.dart';
 import 'package:ncert_books_app/screens/books/widgets/book_card.dart';
 import 'package:ncert_books_app/screens/books/book_detail_screen.dart';
-import 'package:ncert_books_app/screens/home/widgets/class_picker_modal.dart';
-import 'package:ncert_books_app/widgets/ad_banner_widget.dart';
 
 class ExploreScreen extends StatefulWidget {
   final GamificationService gamification;
@@ -28,24 +24,30 @@ class _ExploreScreenState extends State<ExploreScreen>
   final NcertRepository _repository = NcertRepository();
   final TextEditingController _searchController = TextEditingController();
 
-  String _selectedClass = '10';
-  String _selectedSubject = 'All';
   String _searchQuery = '';
+  String _selectedClass = 'All';
+  String _selectedSubject = 'All';
 
-  List<String> _availableSubjects = [];
-  List<NcertBook> _booksToDisplay = [];
-  bool _isLoading = false;
+  List<NcertBook> _searchResults = [];
+  bool _isLoading = true;
 
-  final int _pageSize = 8;
+  final int _pageSize = 12;
   int _currentPage = 1;
 
-  int get _displayedItemCount => _booksToDisplay.isEmpty
-      ? 0
-      : (_currentPage * _pageSize > _booksToDisplay.length
-            ? _booksToDisplay.length
-            : _currentPage * _pageSize);
-
-  bool get _hasMore => _displayedItemCount < _booksToDisplay.length;
+  final List<String> _popularSubjects = [
+    'All',
+    'Mathematics',
+    'Science',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Social Science',
+    'History',
+    'Geography',
+    'English',
+    'Hindi',
+    'Sanskrit',
+  ];
 
   @override
   bool get wantKeepAlive => true;
@@ -53,8 +55,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   @override
   void initState() {
     super.initState();
-    _selectedClass = widget.gamification.userClass;
-    _loadData();
+    _initCatalog();
   }
 
   @override
@@ -63,498 +64,791 @@ class _ExploreScreenState extends State<ExploreScreen>
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    await _repository.loadCatalog();
-    _updateContent();
+  bool get _hasActiveFilterOrQuery =>
+      _searchQuery.trim().isNotEmpty ||
+      _selectedClass != 'All' ||
+      _selectedSubject != 'All';
+
+  Future<void> _initCatalog() async {
+    if (!_repository.isLoaded) {
+      await _repository.loadCatalog();
+    }
+    _runSearch();
     if (mounted) setState(() => _isLoading = false);
   }
 
-  void _updateContent() {
-    _currentPage = 1;
-    _selectedClass = widget.gamification.userClass;
-    _availableSubjects = _repository.getSubjectsForClass(_selectedClass);
-
-    if (_searchQuery.isNotEmpty) {
-      _booksToDisplay = _repository.searchBooks(_searchQuery);
-    } else if (_selectedSubject == 'All') {
-      final List<NcertBook> all = [];
-      for (final s in _availableSubjects) {
-        all.addAll(_repository.getBooks(_selectedClass, s));
-      }
-      _booksToDisplay = all;
+  void _runSearch() {
+    if (!_hasActiveFilterOrQuery) {
+      _searchResults = [];
     } else {
-      _booksToDisplay = _repository.getBooks(_selectedClass, _selectedSubject);
-    }
-  }
-
-  Set<int> _adRowIndices = {};
-
-  void _randomizeAdPositions(int totalRows) {
-    if (totalRows <= 1) {
-      _adRowIndices = {0};
-      return;
-    }
-    final Set<int> positions = {};
-    final rng = math.Random((_selectedClass.hashCode ^ (DateTime.now().minute ~/ 5)));
-    final count = totalRows >= 4 ? 2 : 1;
-    final available = List<int>.generate(totalRows - 1, (i) => i);
-    available.shuffle(rng);
-    for (int i = 0; i < count && i < available.length; i++) {
-      positions.add(available[i]);
-    }
-    if (positions.isEmpty && totalRows > 1) {
-      positions.add(0);
-    }
-    _adRowIndices = positions;
-  }
-
-  void _openClassPicker() {
-    final availableClasses = _repository.getAvailableClasses();
-    final isDark = widget.gamification.isDarkMode;
-
-    ClassPickerModal.show(
-      context: context,
-      selectedClass: _selectedClass,
-      availableClasses: availableClasses,
-      isDark: isDark,
-      onClassSelected: (cls) {
-        widget.gamification.setUserClass(cls);
-        setState(() {
-          _selectedClass = cls;
-          _adRowIndices.clear();
-          _updateContent();
-        });
-      },
-    );
-  }
-
-  List<Widget> _buildSubjectRowsWithAds(int columns, bool isDark) {
-    final List<Widget> slivers = [];
-    final subjectRows = <List<String>>[];
-    for (int i = 0; i < _availableSubjects.length; i += columns) {
-      final end = (i + columns > _availableSubjects.length)
-          ? _availableSubjects.length
-          : i + columns;
-      subjectRows.add(_availableSubjects.sublist(i, end));
-    }
-
-    if (_adRowIndices.isEmpty && subjectRows.isNotEmpty) {
-      _randomizeAdPositions(subjectRows.length);
-    }
-
-    for (int rowIndex = 0; rowIndex < subjectRows.length; rowIndex++) {
-      final row = subjectRows[rowIndex];
-
-      // 1. Add Subject Row of cards (2 cards in one row on mobile)
-      slivers.add(
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (int c = 0; c < columns; c++)
-                  if (c < row.length)
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: c == 0 ? 0 : 6,
-                          right: c == columns - 1 ? 0 : 6,
-                        ),
-                        child: SubjectCard(
-                          subjectName: row[c],
-                          bookCount: _repository.getBooks(_selectedClass, row[c]).length,
-                          isDark: isDark,
-                          onTap: () {
-                            setState(() {
-                              _selectedSubject = _selectedSubject == row[c] ? 'All' : row[c];
-                              _updateContent();
-                            });
-                            widget.gamification.recordSubjectExplored(row[c]);
-                          },
-                        ),
-                      ),
-                    )
-                  else
-                    const Expanded(child: SizedBox()),
-              ],
-            ),
-          ),
-        ),
+      _searchResults = _repository.searchCatalog(
+        query: _searchQuery,
+        className: _selectedClass,
+        subjectName: _selectedSubject,
       );
-
-      // 2. Between rows, insert AdBannerWidget at random positions
-      if (_adRowIndices.contains(rowIndex)) {
-        slivers.add(
-          SliverToBoxAdapter(
-            key: ValueKey('explore_subj_ad_${rowIndex}_$_selectedClass'),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: AdBannerWidget(
-                margin: EdgeInsets.zero,
-                showSectionLabel: true,
-              ),
-            ),
-          ),
-        );
-      }
     }
+    _currentPage = 1;
+  }
 
-    return slivers;
+  int get _displayedCount => _searchResults.isEmpty
+      ? 0
+      : (_currentPage * _pageSize > _searchResults.length
+          ? _searchResults.length
+          : _currentPage * _pageSize);
+
+  bool get _hasMore => _displayedCount < _searchResults.length;
+
+  void _resetFilters() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+      _selectedClass = 'All';
+      _selectedSubject = 'All';
+      _runSearch();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final isDark = widget.gamification.isDarkMode;
+    final availableClasses = ['All', ..._repository.getAvailableClasses()];
 
-    return BlocBuilder<ExploreBloc, ExploreState>(
-      builder: (context, state) {
-        return Scaffold(
-          backgroundColor: isDark ? const Color(0xFF101010) : Colors.transparent,
-          body: SafeArea(
-            child: MaxContentConstraint(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = AppResponsive.getGridColumnCount(
-                    context,
-                    availableWidth: constraints.maxWidth,
-                  );
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: MaxContentConstraint(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = AppResponsive.getGridColumnCount(
+                context,
+                availableWidth: constraints.maxWidth,
+              );
 
-                  return CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    slivers: [
-                      // Search & Class Picker Header Bar
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            left: 20,
-                            right: 20,
-                            top: 12,
-                            bottom: 8,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // 1. Search Header Bar
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        left: 20,
+                        right: 20,
+                        top: 12,
+                        bottom: 6,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Explore Library',
-                                        style: GoogleFonts.roboto(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w800,
-                                          color: isDark ? Colors.white : const Color(0xFF111827),
-                                          letterSpacing: -0.6,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Browse all subjects and official NCERT titles',
-                                        style: GoogleFonts.roboto(
-                                          fontSize: 13,
-                                          color: isDark ? const Color(0xFF777777) : const Color(0xFF6B7280),
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    'Search Library',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDark ? Colors.white : const Color(0xFF111827),
+                                      letterSpacing: -0.6,
+                                    ),
                                   ),
-                                  GestureDetector(
-                                    onTap: _openClassPicker,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF181818) : const Color(0xFFF3F4F6),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
-                                          width: 1.0,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Text(
-                                            'Class $_selectedClass',
-                                            style: GoogleFonts.roboto(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: isDark ? Colors.white : const Color(0xFF111827),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Icon(
-                                            Icons.keyboard_arrow_down_rounded,
-                                            size: 16,
-                                            color: isDark ? const Color(0xFF777777) : const Color(0xFF6B7280),
-                                          ),
-                                        ],
-                                      ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Find any NCERT subject or chapter across all classes',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 12.5,
+                                      color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 14),
-
-                              // Clean Pill Search Bar
-                              GlassSearchBar(
-                                controller: _searchController,
-                                isDark: isDark,
-                                hintText: 'Search subjects, textbooks, chapters...',
-                                onChanged: (val) {
-                                  setState(() {
-                                    _searchQuery = val;
-                                    _updateContent();
-                                  });
-                                },
-                                onClear: () {
-                                  setState(() {
-                                    _searchQuery = '';
-                                    _updateContent();
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Subject Cards Grid (when not searching)
-                      if (_searchQuery.isEmpty) ...[
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                              left: 20,
-                              right: 20,
-                              top: 10,
-                              bottom: 4,
-                            ),
-                            child: Text(
-                              'Subjects for Class $_selectedClass',
-                              style: GoogleFonts.roboto(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : const Color(0xFF111827),
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                          ),
-                        ),
-                        ..._buildSubjectRowsWithAds(columns, isDark),
-                      ],
-
-                      // Books Results Header
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            left: 20,
-                            right: 20,
-                            top: 12,
-                            bottom: 8,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _searchQuery.isNotEmpty
-                                    ? 'Search Results (${_booksToDisplay.length})'
-                                    : (_selectedSubject == 'All'
-                                          ? 'All Textbooks (${_booksToDisplay.length})'
-                                          : '$_selectedSubject Books (${_booksToDisplay.length})'),
-                                style: GoogleFonts.roboto(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.white : const Color(0xFF111827),
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              if (_selectedSubject != 'All')
+                              if (_searchQuery.isNotEmpty ||
+                                  _selectedClass != 'All' ||
+                                  _selectedSubject != 'All')
                                 GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedSubject = 'All';
-                                      _updateContent();
-                                    });
-                                  },
-                                  child: Text(
-                                    'Show all',
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF38BDF8),
+                                  onTap: _resetFilters,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF24242C)
+                                          : const Color(0xFFF1F1F4),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Reset',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                                      ),
                                     ),
                                   ),
                                 ),
                             ],
                           ),
+                          const SizedBox(height: 12),
+
+                          // Search Bar
+                          GlassSearchBar(
+                            controller: _searchController,
+                            isDark: isDark,
+                            hintText: 'Search textbooks (e.g. Physics, Science, Math)...',
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val;
+                                _runSearch();
+                              });
+                            },
+                            onClear: () {
+                              setState(() {
+                                _searchController.clear();
+                                _searchQuery = '';
+                                _runSearch();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 2. Class Filter Horizontal Chips
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: SizedBox(
+                        height: 36,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: availableClasses.length,
+                          itemBuilder: (context, index) {
+                            final cls = availableClasses[index];
+                            final isSel = _selectedClass == cls;
+                            final isUserClass = cls == widget.gamification.userClass;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedClass = cls;
+                                    _runSearch();
+                                  });
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 13,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSel
+                                        ? (isDark ? Colors.white : const Color(0xFF18181B))
+                                        : (isDark ? const Color(0xFF18181E) : Colors.white),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSel
+                                          ? (isDark ? Colors.white : const Color(0xFF18181B))
+                                          : (isDark ? const Color(0xFF262630) : const Color(0xFFE5E7EB)),
+                                      width: isSel ? 1.4 : 1.0,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        cls == 'All' ? 'All Classes' : 'Class $cls',
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 12,
+                                          fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                                          color: isSel
+                                              ? (isDark ? const Color(0xFF18181B) : Colors.white)
+                                              : (isDark ? const Color(0xFFD1D5DB) : const Color(0xFF374151)),
+                                        ),
+                                      ),
+                                      if (isUserClass && cls != 'All') ...[
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          width: 5,
+                                          height: 5,
+                                          decoration: BoxDecoration(
+                                            color: isSel
+                                                ? (isDark ? const Color(0xFF18181B) : Colors.white)
+                                                : const Color(0xFF3B82F6),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
+                    ),
+                  ),
 
-                      // Books Grid
-                      if (_isLoading)
-                        const SliverToBoxAdapter(
+                  // 3. Subject Quick Filter Chips
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: SizedBox(
+                        height: 34,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: _popularSubjects.length,
+                          itemBuilder: (context, index) {
+                            final subj = _popularSubjects[index];
+                            final isSel = _selectedSubject == subj;
+                            final subjColor = subj == 'All'
+                                ? (isDark ? Colors.white : const Color(0xFF18181B))
+                                : AppTheme.getSubjectColor(subj);
+
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedSubject = subj;
+                                    _runSearch();
+                                  });
+                                  if (subj != 'All') {
+                                    widget.gamification.recordSubjectExplored(subj);
+                                  }
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSel
+                                        ? (isDark ? const Color(0xFF22222E) : const Color(0xFFEFF6FF))
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSel
+                                          ? subjColor
+                                          : (isDark ? const Color(0xFF22222C) : const Color(0xFFE5E7EB)),
+                                      width: isSel ? 1.2 : 0.8,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (subj != 'All') ...[
+                                        Icon(
+                                          AppTheme.getSubjectIcon(subj),
+                                          size: 13,
+                                          color: subjColor,
+                                        ),
+                                        const SizedBox(width: 5),
+                                      ],
+                                      Text(
+                                        subj,
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 11.5,
+                                          fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
+                                          color: isSel
+                                              ? (isDark ? Colors.white : const Color(0xFF111827))
+                                              : (isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // 4. Initial Discovery Landing (when no query or filter active)
+                  if (!_hasActiveFilterOrQuery)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF16161A)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.08)
+                                      : const Color(0xFFE5E7EB),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: isDark ? 0.2 : 0.04,
+                                    ),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF38BDF8)
+                                              .withValues(alpha: 0.15),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: const Color(0xFF38BDF8)
+                                                .withValues(alpha: 0.35),
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.manage_search_rounded,
+                                          color: Color(0xFF38BDF8),
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'GLOBAL NCERT SEARCH',
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.4,
+                                          color: isDark
+                                              ? const Color(0xFFA1A1AA)
+                                              : const Color(0xFF6B7280),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    'Search any textbook across all classes',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.3,
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF111827),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Type a book title, subject, or chapter keyword above — or select a Class and Subject filter to view textbooks.',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 12.5,
+                                      height: 1.4,
+                                      color: isDark
+                                          ? const Color(0xFF71717A)
+                                          : const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'POPULAR SEARCHES',
+                              style: GoogleFonts.roboto(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.5,
+                                color: isDark
+                                    ? const Color(0xFFA1A1AA)
+                                    : const Color(0xFF6B7280),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildSuggestionChip(
+                                  'Class 10 Mathematics',
+                                  className: '10',
+                                  subject: 'Mathematics',
+                                ),
+                                _buildSuggestionChip(
+                                  'Class 10 Science',
+                                  className: '10',
+                                  subject: 'Science',
+                                ),
+                                _buildSuggestionChip(
+                                  'Class 12 Physics',
+                                  className: '12',
+                                  query: 'Physics',
+                                ),
+                                _buildSuggestionChip(
+                                  'Class 11 Chemistry',
+                                  className: '11',
+                                  query: 'Chemistry',
+                                ),
+                                _buildSuggestionChip(
+                                  'Class 9 Social Science',
+                                  className: '9',
+                                  subject: 'Social Science',
+                                ),
+                                _buildSuggestionChip(
+                                  'Class 12 Biology',
+                                  className: '12',
+                                  query: 'Biology',
+                                ),
+                                _buildSuggestionChip(
+                                  'Class 8 History',
+                                  className: '8',
+                                  query: 'History',
+                                ),
+                                _buildSuggestionChip(
+                                  'Class 10 English',
+                                  className: '10',
+                                  subject: 'English',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 120),
+                          ],
+                        ),
+                      ),
+                    )
+                  else ...[
+                    // 4. Results Header Bar
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 20,
+                          right: 20,
+                          top: 4,
+                          bottom: 12,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _searchQuery.isNotEmpty
+                                  ? 'Search Results (${_searchResults.length})'
+                                  : '${_selectedClass == 'All' ? 'All Classes' : 'Class $_selectedClass'}${_selectedSubject == 'All' ? '' : ' • $_selectedSubject'} (${_searchResults.length})',
+                              style: GoogleFonts.roboto(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w800,
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF111827),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            Text(
+                              'Showing $_displayedCount of ${_searchResults.length}',
+                              style: GoogleFonts.roboto(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: isDark
+                                    ? const Color(0xFF777777)
+                                    : const Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // 5. Books Grid or Empty State
+                  if (_isLoading)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(50),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF3B82F6),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (_searchResults.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1C1C24) : const Color(0xFFF1F1F4),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.search_off_rounded,
+                                  size: 32,
+                                  color: isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No matching textbooks found',
+                                style: GoogleFonts.roboto(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : const Color(0xFF111827),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Try searching with another subject, book title, or select "All Classes".',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.roboto(
+                                  fontSize: 12.5,
+                                  color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark ? Colors.white : const Color(0xFF18181B),
+                                  foregroundColor: isDark ? const Color(0xFF181818) : Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 10,
+                                  ),
+                                ),
+                                onPressed: _resetFilters,
+                                child: Text(
+                                  'Clear Search Filters',
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else ...[
+                    // Books Grid
+                    SliverPadding(
+                      padding: const EdgeInsets.only(
+                        left: 20,
+                        right: 20,
+                        bottom: 20,
+                      ),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: columns == 2 ? 0.88 : 0.95,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final book = _searchResults[index];
+                            return BookCard(
+                              book: book,
+                              gamification: widget.gamification,
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BookDetailScreen(
+                                      book: book,
+                                      gamification: widget.gamification,
+                                    ),
+                                  ),
+                                );
+                                if (mounted) setState(() {});
+                              },
+                            );
+                          },
+                          childCount: _displayedCount,
+                        ),
+                      ),
+                    ),
+
+                    // Pagination Load More Controls
+                    if (_hasMore)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                            left: 20,
+                            right: 20,
+                            bottom: 110,
+                          ),
                           child: Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(40),
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF38BDF8),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(22),
+                              onTap: () {
+                                setState(() {
+                                  _currentPage++;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 13,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF181818) : Colors.white,
+                                  borderRadius: BorderRadius.circular(22),
+                                  border: Border.all(
+                                    color: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: isDark ? Colors.white : const Color(0xFF111827),
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Load More (${_searchResults.length - _displayedCount} remaining)',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : const Color(0xFF111827),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        )
-                      else if (_booksToDisplay.isEmpty)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.all(40),
-                            child: Center(
+                        ),
+                      )
+                    else if (_searchResults.length > _pageSize)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 110),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF181818) : const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
+                                ),
+                              ),
                               child: Text(
-                                'No books found',
+                                'All ${_searchResults.length} textbooks loaded',
                                 style: GoogleFonts.roboto(
-                                  fontSize: 15,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
                                   color: isDark ? const Color(0xFF777777) : const Color(0xFF6B7280),
                                 ),
                               ),
                             ),
                           ),
-                        )
-                      else ...[
-                        SliverPadding(
-                          padding: const EdgeInsets.only(
-                            left: 20,
-                            right: 20,
-                            bottom: 16,
-                          ),
-                          sliver: SliverGrid(
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: columns,
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 0.88,
-                            ),
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final book = _booksToDisplay[index];
-                              return BookCard(
-                                book: book,
-                                gamification: widget.gamification,
-                                onTap: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => BookDetailScreen(
-                                        book: book,
-                                        gamification: widget.gamification,
-                                      ),
-                                    ),
-                                  );
-                                  if (mounted) setState(() {});
-                                },
-                              );
-                            }, childCount: _displayedItemCount),
-                          ),
                         ),
+                      )
+                    else
+                      const SliverToBoxAdapter(child: SizedBox(height: 110)),
+                  ],
+                ],
+              ],
+            );
+            },
+          ),
+        ),
+      ),
+    );
+  }
 
-                        // Pagination Load More Controls
-                        if (_hasMore)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                left: 20,
-                                right: 20,
-                                bottom: 95,
-                              ),
-                              child: Center(
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(22),
-                                  onTap: () {
-                                    setState(() {
-                                      _currentPage++;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 13,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF181818) : Colors.white,
-                                      borderRadius: BorderRadius.circular(22),
-                                      border: Border.all(
-                                        color: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
-                                        width: 1.0,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.keyboard_arrow_down_rounded,
-                                          color: isDark ? Colors.white : const Color(0xFF111827),
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Load More (${_booksToDisplay.length - _displayedItemCount} remaining)',
-                                          style: GoogleFonts.roboto(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDark ? Colors.white : const Color(0xFF111827),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (_booksToDisplay.length > _pageSize)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 95),
-                              child: Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF181818) : const Color(0xFFF3F4F6),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'All ${_booksToDisplay.length} textbooks loaded',
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? const Color(0xFF777777) : const Color(0xFF6B7280),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          const SliverToBoxAdapter(child: SizedBox(height: 95)),
-                      ],
-                    ],
-                  );
-                },
+  Widget _buildSuggestionChip(
+    String label, {
+    String? className,
+    String? subject,
+    String? query,
+  }) {
+    final isDark = widget.gamification.isDarkMode;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() {
+          if (className != null) _selectedClass = className;
+          if (subject != null) _selectedSubject = subject;
+          if (query != null) {
+            _searchQuery = query;
+            _searchController.text = query;
+          }
+          _runSearch();
+        });
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E24) : const Color(0xFFF1F1F4),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? const Color(0xFF282832) : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: 13,
+              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.roboto(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF1F2937),
               ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

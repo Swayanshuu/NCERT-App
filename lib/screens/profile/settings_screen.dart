@@ -151,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = widget.gamification.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF101010) : AppTheme.lightBackground,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         scrolledUnderElevation: 0,

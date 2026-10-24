@@ -41,9 +41,9 @@ class GlassNavigationBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(34),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.08),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 28,
+            offset: const Offset(0, 8),
             spreadRadius: -2,
           ),
         ],
@@ -51,18 +51,18 @@ class GlassNavigationBar extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(34),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             decoration: BoxDecoration(
               color: isDark
-                  ? const Color(0xFF181818).withValues(alpha: 0.95)
-                  : Colors.white.withValues(alpha: 0.95),
+                  ? const Color(0xFF16161C).withValues(alpha: 0.72)
+                  : Colors.white.withValues(alpha: 0.78),
               borderRadius: BorderRadius.circular(34),
               border: Border.all(
                 color: isDark
-                    ? const Color(0xFF282828)
-                    : const Color(0xFFE5E7EB),
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.07),
                 width: 1.0,
               ),
             ),
@@ -80,9 +80,15 @@ class GlassNavigationBar extends StatelessWidget {
                       margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF242424)
+                            ? Colors.white.withValues(alpha: 0.16)
                             : const Color(0xFF18181B),
                         borderRadius: BorderRadius.circular(28),
+                        border: isDark
+                            ? Border.all(
+                                color: Colors.white.withValues(alpha: 0.20),
+                                width: 0.8,
+                              )
+                            : null,
                       ),
                     ),
                   ),
@@ -93,7 +99,7 @@ class GlassNavigationBar extends StatelessWidget {
                     final item = items[index];
                     final isSelected = selectedIndex == index;
 
-                    final selectedTextColor = Colors.white;
+                    const selectedTextColor = Colors.white;
                     final unselectedTextColor = isDark
                         ? const Color(0xFF777777)
                         : const Color(0xFF6B7280);

@@ -259,7 +259,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     return ConfettiOverlay(
       controller: _confettiController,
       child: Scaffold(
-        backgroundColor: const Color(0xFF101010),
+        backgroundColor: AppTheme.darkBackground,
         body: SafeArea(
           child: MaxContentConstraint(
             child: CustomScrollView(

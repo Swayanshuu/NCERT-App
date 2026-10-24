@@ -61,7 +61,7 @@ class AvatarSelectorModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatars = GamificationService.avatars;
+    const avatars = GamificationService.avatars;
     final isDark = gamification.isDarkMode;
 
     return Column(

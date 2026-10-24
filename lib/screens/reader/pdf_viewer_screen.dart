@@ -11,6 +11,7 @@ import 'package:ncert_books_app/models/ncert_book.dart';
 import 'package:ncert_books_app/services/gamification_service.dart';
 import 'package:ncert_books_app/services/pdf_cache_service.dart';
 import 'package:ncert_books_app/widgets/custom_snack_bar.dart';
+import 'package:ncert_books_app/theme/app_theme.dart';
 import 'package:ncert_books_app/theme/app_responsive.dart';
 import 'package:ncert_books_app/widgets/glass/glass_surface.dart';
 import 'package:ncert_books_app/widgets/glass/glass_button.dart';
@@ -374,7 +375,7 @@ startxref
       autofocus: true,
       onKeyEvent: _onKeyEvent,
       child: Scaffold(
-        backgroundColor: const Color(0xFF101010),
+        backgroundColor: AppTheme.darkBackground,
         body: SafeArea(
           child: Row(
             children: [

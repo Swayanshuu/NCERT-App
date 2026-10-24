@@ -50,27 +50,55 @@ class BookCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF222222),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(0xFF282828),
-                            width: 0.8,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              'Class ${book.className}',
+                              style: GoogleFonts.roboto(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF60A5FA),
+                                letterSpacing: 0.1,
+                              ),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          book.subject,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.roboto(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF777777),
-                            letterSpacing: -0.1,
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF222222),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFF282828),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                book.subject,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.roboto(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF9CA3AF),
+                                  letterSpacing: -0.1,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
 
@@ -103,8 +131,8 @@ class BookCard extends StatelessWidget {
                       AutoSizeText(
                         book.text,
                         maxLines: 2,
-                        minFontSize: 13,
-                        maxFontSize: 15.5,
+                        minFontSize: 12,
+                        maxFontSize: 16,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.roboto(
                           fontWeight: FontWeight.w700,

@@ -88,31 +88,48 @@ class AppTheme {
   static const Color lightBackground = Color(0xFFFAFAFA);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightSurfaceElevated = Color(0xFFF3F4F6); // Soft pill inputs & search
+  static const Color lightSurfaceElevated = Color(
+    0xFFF3F4F6,
+  ); // Soft pill inputs & search
   static const Color lightBorder = Color(0xFFE5E7EB);
   static const Color lightBorderHighlight = Color(0xFFD1D5DB);
   static const Color lightBorderSubtle = Color(0xFFF1F1F4);
 
-  static const Color lightTextPrimary = Color(0xFF18181B); // High-contrast Charcoal
+  static const Color lightTextPrimary = Color(
+    0xFF18181B,
+  ); // High-contrast Charcoal
   static const Color lightTextSecondary = Color(0xFF52525B);
   static const Color lightTextMuted = Color(0xFF9CA3AF);
 
   // ==========================================
   // 6. Neutrals: Dark Mode (Exact Threads by Meta)
   // ==========================================
-  static const Color darkBackground = Color(0xFF101010); // Meta Threads Canvas Black
-  static const Color darkSurface = Color(0xFF181818);    // Threads Card / Post Surface
+  static const Color darkBackground = Color.fromARGB(
+    255,
+    24,
+    24,
+    24,
+  ); // Custom Grey Background
+  static const Color darkSurface = Color(
+    0xFF181818,
+  ); // Threads Card / Post Surface
   static const Color darkCard = Color(0xFF181818);
-  static const Color darkSurfaceElevated = Color(0xFF222222); // Threads Input / Pill
-  static const Color darkBorder = Color(0xFF282828);     // Threads Subtle Hairline Border
+  static const Color darkSurfaceElevated = Color(
+    0xFF222222,
+  ); // Threads Input / Pill
+  static const Color darkBorder = Color(
+    0xFF282828,
+  ); // Threads Subtle Hairline Border
   static const Color darkSurfaceSubtle = Color(0xFF141414);
   static const Color accentTeal = Color(0xFFFFFFFF);
   static const Color darkBorderHighlight = Color(0xFF383838);
   static const Color darkBorderSubtle = Color(0xFF202020);
 
-  static const Color darkTextPrimary = Color(0xFFFFFFFF);   // Pure Crisp White
-  static const Color darkTextSecondary = Color(0xFF777777); // Signature Threads Neutral Grey
-  static const Color darkTextMuted = Color(0xFF555555);     // Muted Meta Grey
+  static const Color darkTextPrimary = Color(0xFFFFFFFF); // Pure Crisp White
+  static const Color darkTextSecondary = Color(
+    0xFF777777,
+  ); // Signature Threads Neutral Grey
+  static const Color darkTextMuted = Color(0xFF555555); // Muted Meta Grey
 
   // Compatibility getter aliases
   static Color get duoGreen => emeraldMint;
@@ -132,8 +149,12 @@ class AppTheme {
   // 7. Light ThemeData
   // ==========================================
   static ThemeData lightThemeData() {
-    final baseTextTheme = GoogleFonts.robotoTextTheme(ThemeData.light().textTheme);
-    final headingFont = GoogleFonts.robotoTextTheme(ThemeData.light().textTheme);
+    final baseTextTheme = GoogleFonts.robotoTextTheme(
+      ThemeData.light().textTheme,
+    );
+    final headingFont = GoogleFonts.robotoTextTheme(
+      ThemeData.light().textTheme,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -258,7 +279,9 @@ class AppTheme {
   // 8. Dark ThemeData
   // ==========================================
   static ThemeData darkThemeData() {
-    final baseTextTheme = GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme);
+    final baseTextTheme = GoogleFonts.robotoTextTheme(
+      ThemeData.dark().textTheme,
+    );
     final headingFont = GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme);
 
     return ThemeData(
@@ -387,11 +410,19 @@ class AppTheme {
   static Color getSubjectColor(String subject) {
     final s = subject.toLowerCase();
     if (s.contains('math')) return subjectMathColor;
-    if (s.contains('sci') || s.contains('evs') || s.contains('phys') || s.contains('chem') || s.contains('bio')) {
+    if (s.contains('sci') ||
+        s.contains('evs') ||
+        s.contains('phys') ||
+        s.contains('chem') ||
+        s.contains('bio')) {
       return subjectScienceColor;
     }
     if (s.contains('eng')) return subjectEnglishColor;
-    if (s.contains('soc') || s.contains('his') || s.contains('geo') || s.contains('pol') || s.contains('civ')) {
+    if (s.contains('soc') ||
+        s.contains('his') ||
+        s.contains('geo') ||
+        s.contains('pol') ||
+        s.contains('civ')) {
       return subjectSocialColor;
     }
     if (s.contains('hin') || s.contains('sansk') || s.contains('urdu')) {
@@ -405,11 +436,19 @@ class AppTheme {
     if (isDark) return darkCard;
     final s = subject.toLowerCase();
     if (s.contains('math')) return pastelCyanLight;
-    if (s.contains('sci') || s.contains('evs') || s.contains('phys') || s.contains('chem') || s.contains('bio')) {
+    if (s.contains('sci') ||
+        s.contains('evs') ||
+        s.contains('phys') ||
+        s.contains('chem') ||
+        s.contains('bio')) {
       return pastelMintLight;
     }
     if (s.contains('eng')) return pastelYellowLight;
-    if (s.contains('soc') || s.contains('his') || s.contains('geo') || s.contains('pol') || s.contains('civ')) {
+    if (s.contains('soc') ||
+        s.contains('his') ||
+        s.contains('geo') ||
+        s.contains('pol') ||
+        s.contains('civ')) {
       return pastelPurpleLight;
     }
     if (s.contains('hin') || s.contains('sansk') || s.contains('urdu')) {
@@ -423,11 +462,19 @@ class AppTheme {
     if (isDark) return darkBorder;
     final s = subject.toLowerCase();
     if (s.contains('math')) return pastelCyanBorder;
-    if (s.contains('sci') || s.contains('evs') || s.contains('phys') || s.contains('chem') || s.contains('bio')) {
+    if (s.contains('sci') ||
+        s.contains('evs') ||
+        s.contains('phys') ||
+        s.contains('chem') ||
+        s.contains('bio')) {
       return pastelMintBorder;
     }
     if (s.contains('eng')) return pastelYellowBorder;
-    if (s.contains('soc') || s.contains('his') || s.contains('geo') || s.contains('pol') || s.contains('civ')) {
+    if (s.contains('soc') ||
+        s.contains('his') ||
+        s.contains('geo') ||
+        s.contains('pol') ||
+        s.contains('civ')) {
       return pastelPurpleBorder;
     }
     if (s.contains('hin') || s.contains('sansk') || s.contains('urdu')) {
@@ -471,14 +518,22 @@ class AppTheme {
   static IconData getSubjectIcon(String subject) {
     final s = subject.toLowerCase();
     if (s.contains('math')) return Icons.calculate_rounded;
-    if (s.contains('sci') || s.contains('evs') || s.contains('phys') || s.contains('chem') || s.contains('bio')) {
+    if (s.contains('sci') ||
+        s.contains('evs') ||
+        s.contains('phys') ||
+        s.contains('chem') ||
+        s.contains('bio')) {
       return Icons.science_rounded;
     }
     if (s.contains('eng')) return Icons.auto_stories_rounded;
     if (s.contains('hin') || s.contains('sansk') || s.contains('urdu')) {
       return Icons.translate_rounded;
     }
-    if (s.contains('soc') || s.contains('his') || s.contains('geo') || s.contains('pol') || s.contains('civ')) {
+    if (s.contains('soc') ||
+        s.contains('his') ||
+        s.contains('geo') ||
+        s.contains('pol') ||
+        s.contains('civ')) {
       return Icons.public_rounded;
     }
     return Icons.menu_book_rounded;
@@ -490,17 +545,15 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.invertedStylus,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+  };
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(
-      parent: AlwaysScrollableScrollPhysics(),
-    );
+    return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
   }
 }

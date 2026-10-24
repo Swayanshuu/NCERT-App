@@ -79,6 +79,42 @@ class NcertRepository {
     return results;
   }
 
+  List<NcertBook> searchCatalog({
+    String query = '',
+    String className = 'All',
+    String subjectName = 'All',
+  }) {
+    final q = query.trim().toLowerCase();
+    final List<NcertBook> results = [];
+
+    _catalog.forEach((cls, subjects) {
+      if (className != 'All' && cls != className) return;
+
+      subjects.forEach((subj, books) {
+        if (subjectName != 'All' &&
+            !subj.toLowerCase().contains(subjectName.toLowerCase())) {
+          return;
+        }
+
+        for (final b in books) {
+          if (q.isEmpty) {
+            results.add(b);
+          } else {
+            final matchesText = b.text.toLowerCase().contains(q);
+            final matchesSubj = b.subject.toLowerCase().contains(q);
+            final matchesClass = b.className.toLowerCase() == q ||
+                'class ${b.className}'.toLowerCase().contains(q);
+            if (matchesText || matchesSubj || matchesClass) {
+              results.add(b);
+            }
+          }
+        }
+      });
+    });
+
+    return results;
+  }
+
   Future<List<NcertBook>> getAllBooks() async {
     await loadCatalog();
     final List<NcertBook> results = [];

@@ -32,13 +32,13 @@ class _ConfettiOverlayState extends State<ConfettiOverlay> {
             emissionFrequency: 0.05,
             numberOfParticles: 25,
             gravity: 0.1,
-            colors: [
+            colors: const [
               Colors.green,
               Colors.blue,
               Colors.pink,
               Colors.orange,
               Colors.purple,
-              const Color(0xFFFFD700),
+              Color(0xFFFFD700),
             ],
           ),
         ),

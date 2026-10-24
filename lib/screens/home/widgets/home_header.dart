@@ -1,83 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shimmer_text/shimmer_text.dart';
-import 'package:ncert_books_app/theme/app_theme.dart';
 
 class HomeHeader extends StatelessWidget {
   final bool isDark;
   final VoidCallback onProfileTap;
+  final VoidCallback? onMenuTap;
 
   const HomeHeader({
     super.key,
     required this.isDark,
     required this.onProfileTap,
+    this.onMenuTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 6),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.asset(
-              'assets/logo.png',
-              width: 30,
-              height: 30,
-              fit: BoxFit.cover,
-            ),
-          ),
+          // Brand Name
           Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ShimmerText(
-                textFamily:
-                    GoogleFonts.allura(
-                      fontWeight: FontWeight.bold,
-                    ).fontFamily ??
-                    'Allura',
-                text: 'SWYNX',
-                textSize: 22,
-                textColor: Colors.white,
-                shiningColor: const Color(0xFF777777),
-                letterspacing: 2.0,
-                duration: const Duration(seconds: 2),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'NCERT',
+                    style: GoogleFonts.outfit(
+                      fontSize: 27,
+                      color: isDark ? Colors.white : const Color(0xFF111827),
+                    ),
+                  ),
+                  Text(
+                    '.',
+                    style: GoogleFonts.outfit(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF38BDF8),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 1),
               Text(
-                'NCERT Books & Solutions',
-                style: GoogleFonts.roboto(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary,
-                  letterSpacing: -0.1,
+                'Books & Solutions',
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  color: const Color.fromARGB(255, 142, 142, 142),
                 ),
               ),
             ],
           ),
+
+          // Right Controls:Hamburger Menu Icon
           GestureDetector(
-            onTap: onProfileTap,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark
-                    ? const Color(0xFF242424)
-                    : const Color(0xFFF1F1F4),
-                border: Border.all(
-                  color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
-                  width: 1.0,
+            onTap: onMenuTap ?? onProfileTap,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              width: 34,
+              height: 34,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 2.2,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white : const Color(0xFF111827),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      width: 16,
+                      height: 2.2,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white : const Color(0xFF111827),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              child: Icon(
-                Icons.person_rounded,
-                size: 19,
-                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
               ),
             ),
           ),
